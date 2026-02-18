@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@color/background">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:padding="12dp" android:background="@color/primary"
+        android:gravity="center_vertical">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:text="Adopt a Pet" android:textColor="@color/text_on_primary"
+            android:textSize="18sp" android:textStyle="bold"/>
+    </LinearLayout>
+    <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:scrollbars="none" android:padding="8dp">
+        <com.google.android.material.chip.ChipGroup android:id="@+id/chipGroupFilter"
+            android:layout_width="wrap_content" android:layout_height="wrap_content" app:singleSelection="true">
+            <com.google.android.material.chip.Chip android:id="@+id/chipFilterAll"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="All" android:checked="true"/>
+            <com.google.android.material.chip.Chip android:id="@+id/chipFilterDog"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dogs"/>
+            <com.google.android.material.chip.Chip android:id="@+id/chipFilterCat"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cats"/>
+            <com.google.android.material.chip.Chip android:id="@+id/chipFilterBird"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Birds"/>
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout android:id="@+id/swipeRefresh"
+        android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <RelativeLayout android:layout_width="match_parent" android:layout_height="match_parent">
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvPets"
+                android:layout_width="match_parent" android:layout_height="match_parent"
+                android:padding="8dp" android:clipToPadding="false" android:paddingBottom="80dp"/>
+            <ProgressBar android:id="@+id/progressBar" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:layout_centerInParent="true" android:visibility="gone"/>
+            <TextView android:id="@+id/tvEmptyState" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:layout_centerInParent="true"
+                android:text="No pets available" android:textSize="14sp"
+                android:textColor="@color/text_secondary" android:visibility="gone"/>
+        </RelativeLayout>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+</LinearLayout>

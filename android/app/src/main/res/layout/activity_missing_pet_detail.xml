@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@color/background">
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar" android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize" android:background="@color/primary"
+        app:navigationIcon="@drawable/ic_back" app:titleTextColor="@color/text_on_primary"
+        app:title="Missing Pet"/>
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="16dp">
+            <ImageView android:id="@+id/ivMissingPetImage"
+                android:layout_width="match_parent" android:layout_height="220dp"
+                android:scaleType="centerCrop" android:src="@drawable/ic_placeholder_pet"
+                android:layout_marginBottom="12dp"/>
+            <TextView android:id="@+id/tvMissingPetName"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textSize="22sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
+            <TextView android:id="@+id/tvBreed"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textSize="14sp" android:textColor="@color/text_secondary" android:layout_marginBottom="8dp"/>
+            <TextView android:id="@+id/tvLastSeen"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textSize="13sp" android:textColor="@color/text_primary"/>
+            <TextView android:id="@+id/tvDateLastSeen"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textSize="13sp" android:textColor="@color/text_secondary"/>
+            <TextView android:id="@+id/tvDescription"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textSize="13sp" android:textColor="@color/text_secondary"
+                android:layout_marginTop="8dp" android:layout_marginBottom="8dp"/>
+            <TextView android:id="@+id/tvContact"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textSize="13sp" android:textColor="@color/primary"/>
+            <TextView android:id="@+id/tvContactEmail"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textSize="13sp" android:textColor="@color/text_secondary"/>
+            <TextView android:id="@+id/tvReward"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textSize="13sp" android:textColor="@color/secondary"
+                android:textStyle="bold" android:layout_marginTop="4dp"/>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnViewMap"
+                style="@style/Widget.AnimalBase.Button.Outline"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="16dp" android:text="View on Map"/>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnContactOwner"
+                style="@style/Widget.AnimalBase.Button"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:text="Contact Owner"/>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnReportSighting"
+                style="@style/Widget.AnimalBase.Button.Outline"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:text="I Spotted This Pet!"/>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

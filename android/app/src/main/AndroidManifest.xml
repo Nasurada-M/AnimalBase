@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AnimalBase"
+        android:usesCleartextTraffic="true"
+        android:hardwareAccelerated="true">
+
+        <!-- ======================================================
+             APP LAUNCHER ICON: Change @mipmap/ic_launcher above
+             Place your icon files in:
+               res/mipmap-hdpi/ic_launcher.png    (72x72)
+               res/mipmap-mdpi/ic_launcher.png    (48x48)
+               res/mipmap-xhdpi/ic_launcher.png   (96x96)
+               res/mipmap-xxhdpi/ic_launcher.png  (144x144)
+               res/mipmap-xxxhdpi/ic_launcher.png (192x192)
+             ====================================================== -->
+
+        <activity
+            android:name=".ui.auth.SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AnimalBase.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".ui.auth.LoginActivity" android:exported="false" />
+        <activity android:name=".ui.auth.RegisterActivity" android:exported="false" />
+        <activity android:name=".ui.home.MainActivity" android:exported="false" />
+        <activity android:name=".ui.adoption.PetDetailActivity" android:exported="false" />
+        <activity android:name=".ui.adoption.AdoptionFormActivity" android:exported="false" />
+        <activity android:name=".ui.missing.MissingPetDetailActivity" android:exported="false" />
+        <activity android:name=".ui.report.ReportMissingActivity" android:exported="false" />
+        <activity android:name=".ui.report.ReportSightingActivity" android:exported="false" />
+        <activity android:name=".ui.encyclopedia.AnimalDetailActivity" android:exported="false" />
+        <activity android:name=".ui.profile.ProfileActivity" android:exported="false" />
+        <activity android:name=".ui.notifications.NotificationsActivity" android:exported="false" />
+        <activity android:name=".ui.map.MapActivity" android:exported="false" />
+
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="@string/google_maps_key" />
+
+        <!-- Firebase Cloud Messaging -->
+        <service
+            android:name=".utils.AnimalBaseFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- Firebase notification channel icon -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/primary" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="animalbase_channel" />
+
+    </application>
+</manifest>

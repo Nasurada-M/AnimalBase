@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AnimalBase</string>
+    <string name="app_tagline">Connecting Animals with Loving Homes</string>
+
+    <!-- Auth -->
+    <string name="login">Log In</string>
+    <string name="register">Register</string>
+    <string name="logout">Log Out</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="full_name">Full Name</string>
+    <string name="phone_number">Phone Number</string>
+    <string name="address">Address</string>
+    <string name="create_account">Create Account</string>
+    <string name="already_have_account">Already have an account? Log In</string>
+    <string name="dont_have_account">Don\'t have an account? Register</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="confirm_password">Confirm Password</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_adopt">Adopt</string>
+    <string name="nav_add">Add</string>
+    <string name="nav_missing">Missing</string>
+    <string name="nav_encyclopedia">Encyclopedia</string>
+
+    <!-- Home -->
+    <string name="featured_pets">Featured Pets</string>
+    <string name="missing_pets">Missing Pets</string>
+    <string name="see_all">See All</string>
+    <string name="search_hint">Search pets, animals…</string>
+
+    <!-- Adoption -->
+    <string name="adopt_now">Adopt Now</string>
+    <string name="adoption_application">Adoption Application</string>
+    <string name="status_available">Available</string>
+    <string name="status_pending">Pending</string>
+    <string name="status_adopted">Adopted</string>
+    <string name="status_rejected">Rejected</string>
+    <string name="status_under_review">Under Review</string>
+
+    <!-- Missing Pets -->
+    <string name="report_missing">Report Missing Pet</string>
+    <string name="report_sighting">Report Sighting</string>
+    <string name="last_seen">Last seen</string>
+    <string name="contact_owner">Contact Owner</string>
+    <string name="reward_offered">Reward Offered</string>
+    <string name="status_missing">Missing</string>
+    <string name="status_found">Found</string>
+
+    <!-- Encyclopedia -->
+    <string name="animal_encyclopedia">Animal Encyclopedia</string>
+    <string name="add_to_favorites">Add to Favorites</string>
+    <string name="remove_from_favorites">Remove from Favorites</string>
+    <string name="conservation_status">Conservation Status</string>
+
+    <!-- Profile -->
+    <string name="my_profile">My Profile</string>
+    <string name="edit_profile">Edit Profile</string>
+    <string name="my_applications">My Applications</string>
+    <string name="my_reports">My Reports</string>
+    <string name="settings">Settings</string>
+    <string name="notifications">Notifications</string>
+    <string name="change_password">Change Password</string>
+    <string name="member_since">Member since</string>
+
+    <!-- Common -->
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="submit">Submit</string>
+    <string name="delete">Delete</string>
+    <string name="confirm">Confirm</string>
+    <string name="close">Close</string>
+    <string name="loading">Loading…</string>
+    <string name="no_data">No data available</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_network">Network error. Check your connection.</string>
+    <string name="success">Success</string>
+    <string name="required_field">This field is required</string>
+    <string name="upload_photo">Upload Photo</string>
+    <string name="take_photo">Take Photo</string>
+    <string name="choose_from_gallery">Choose from Gallery</string>
+    <string name="photo_added">Photo added</string>
+    <string name="add_photos">Add Photos</string>
+    <string name="location">Location</string>
+    <string name="date">Date</string>
+    <string name="breed">Breed</string>
+    <string name="gender">Gender</string>
+    <string name="age">Age</string>
+    <string name="weight">Weight</string>
+    <string name="color">Color / Appearance</string>
+    <string name="description">Description</string>
+    <string name="distinctive_features">Distinctive Features</string>
+    <string name="view_on_map">View on Map</string>
+    <string name="open_map">Open Map</string>
+</resources>

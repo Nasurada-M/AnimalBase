@@ -1,0 +1,8 @@
+<!-- ======================================================
+     ICON: Adopt Tab - Replace with your own drawable
+     ====================================================== -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="@color/nav_bar_unselected"
+        android:pathData="M12,21.593c-5.63,-5.539 -11,-10.297 -11,-14.402 0,-3.791 3.068,-5.191 5.281,-5.191 1.312,0 4.151,1.024 5.719,4.457 1.59,-3.433 4.431,-4.431 5.726,-4.431 2.54,0 5.274,1.621 5.274,5.565 0,4.106 -5.429,8.862 -11,14.402z"/>
+</vector>
