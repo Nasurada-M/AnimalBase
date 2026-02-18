@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ======================================================
+     APP LAUNCHER ICON (xxxhdpi)
+     To change: replace this file with a PNG or use Android Studio's
+     "Image Asset" tool (right-click res → New → Image Asset)
+     Recommended sizes:
+       mdpi: 48x48, hdpi: 72x72, xhdpi: 96x96
+       xxhdpi: 144x144, xxxhdpi: 192x192
+     ====================================================== -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/primary"/>
+    <foreground android:drawable="@drawable/ic_placeholder_pet"/>
+</adaptive-icon>

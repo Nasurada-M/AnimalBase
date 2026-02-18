@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+======================================================
+PET CARD: Used in adoption listings and home screen
+- Pet image: ivPetImage (Glide loads from API URL)
+- Placeholder: @drawable/ic_placeholder_pet (change to update placeholder)
+- Status badge colors: status_available, status_pending, etc. (colors.xml)
+======================================================
+-->
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="160dp"
+    android:layout_height="200dp"
+    android:layout_margin="4dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="4dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <RelativeLayout android:layout_width="match_parent" android:layout_height="match_parent">
+
+        <!-- ======================================================
+             PET IMAGE: loaded via Glide from API URL
+             To change placeholder image: edit ic_placeholder_pet.xml
+             OR change the placeholder() call in ImageLoader.kt:15
+             ====================================================== -->
+        <ImageView
+            android:id="@+id/ivPetImage"
+            android:layout_width="match_parent"
+            android:layout_height="130dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_placeholder_pet"/>
+
+        <!-- Status Badge -->
+        <TextView
+            android:id="@+id/tvPetStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentEnd="true"
+            android:layout_margin="8dp"
+            android:background="@drawable/bg_status_badge"
+            android:text="Available"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_on_primary"
+            android:paddingStart="8dp" android:paddingEnd="8dp"
+            android:paddingTop="3dp" android:paddingBottom="3dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/ivPetImage"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <TextView
+                android:id="@+id/tvPetName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Pet Name"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:maxLines="1"
+                android:ellipsize="end"/>
+
+            <TextView
+                android:id="@+id/tvPetBreed"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Breed"
+                android:textSize="11sp"
+                android:textColor="@color/text_secondary"
+                android:maxLines="1"
+                android:ellipsize="end"/>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="2dp">
+                <TextView android:id="@+id/tvPetGender"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:text="Male" android:textSize="10sp" android:textColor="@color/text_secondary"/>
+                <TextView android:id="@+id/tvPetAge"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="2y" android:textSize="10sp" android:textColor="@color/primary"/>
+            </LinearLayout>
+        </LinearLayout>
+
+    </RelativeLayout>
+</com.google.android.material.card.MaterialCardView>

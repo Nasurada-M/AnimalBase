@@ -1,0 +1,10 @@
+<!-- ======================================================
+     PLACEHOLDER IMAGE: Shown when pet photo fails to load
+     To change: replace this file OR update ImageLoader.kt line ~16
+     ====================================================== -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp" android:height="100dp" android:viewportWidth="100" android:viewportHeight="100">
+    <path android:fillColor="#E0E0E0" android:pathData="M0,0h100v100H0z"/>
+    <path android:fillColor="#BDBDBD"
+        android:pathData="M50,20c-8.28,0-15,6.72-15,15s6.72,15 15,15 15,-6.72 15,-15S58.28,20 50,20zM20,75c0,-13.33 20,-20 30,-20s30,6.67 30,20L20,75z"/>
+</vector>

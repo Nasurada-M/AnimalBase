@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+======================================================
+MAIN LAYOUT: Bottom Navigation + FAB in center
+FAB Icon: @drawable/ic_add (replace drawable to change icon)
+FAB Color: @color/fab_background (change in colors.xml)
+Nav bar colors: nav_bar_background, nav_bar_selected, nav_bar_unselected (colors.xml)
+======================================================
+-->
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/fragmentContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginBottom="60dp"/>
+
+    <!-- Bottom navigation bar with curved cutout for FAB -->
+    <com.google.android.material.bottomappbar.BottomAppBar
+        android:id="@+id/bottomAppBar"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_gravity="bottom"
+        app:fabCradleMargin="8dp"
+        app:fabCradleRoundedCornerRadius="12dp"
+        app:fabCradleVerticalOffset="12dp"
+        android:backgroundTint="@color/nav_bar_background"
+        app:elevation="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <LinearLayout android:id="@+id/navHome"
+                android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:orientation="vertical"
+                android:gravity="center" android:clickable="true" android:focusable="true">
+                <ImageView android:id="@+id/ivNavHome"
+                    android:layout_width="24dp" android:layout_height="24dp"
+                    android:src="@drawable/ic_home"
+                    app:tint="@color/primary"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/nav_home" android:textSize="10sp"
+                    android:textColor="@color/primary"/>
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/navAdopt"
+                android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:orientation="vertical"
+                android:gravity="center" android:clickable="true" android:focusable="true">
+                <ImageView android:id="@+id/ivNavAdopt"
+                    android:layout_width="24dp" android:layout_height="24dp"
+                    android:src="@drawable/ic_adopt"
+                    app:tint="@color/nav_bar_unselected"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/nav_adopt" android:textSize="10sp"
+                    android:textColor="@color/nav_bar_unselected"/>
+            </LinearLayout>
+
+            <!-- Empty space for FAB -->
+            <View android:layout_width="56dp" android:layout_height="match_parent"/>
+
+            <LinearLayout android:id="@+id/navMissing"
+                android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:orientation="vertical"
+                android:gravity="center" android:clickable="true" android:focusable="true">
+                <ImageView android:id="@+id/ivNavMissing"
+                    android:layout_width="24dp" android:layout_height="24dp"
+                    android:src="@drawable/ic_missing"
+                    app:tint="@color/nav_bar_unselected"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/nav_missing" android:textSize="10sp"
+                    android:textColor="@color/nav_bar_unselected"/>
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/navEncyclopedia"
+                android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:orientation="vertical"
+                android:gravity="center" android:clickable="true" android:focusable="true">
+                <ImageView android:id="@+id/ivNavEncyclopedia"
+                    android:layout_width="24dp" android:layout_height="24dp"
+                    android:src="@drawable/ic_book"
+                    app:tint="@color/nav_bar_unselected"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/nav_encyclopedia" android:textSize="9sp"
+                    android:textColor="@color/nav_bar_unselected"/>
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.bottomappbar.BottomAppBar>
+
+    <!--
+    ======================================================
+    CENTER "+" FAB BUTTON:
+    - Icon: @drawable/ic_add (change in res/drawable/ic_add.xml)
+    - Color: @color/fab_background (change in colors.xml)
+    - Opens an AddOptionsBottomSheet on click (MainActivity.kt)
+    ======================================================
+    -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabAdd"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="8dp"
+        android:contentDescription="Add"
+        android:src="@drawable/ic_add"
+        app:backgroundTint="@color/fab_background"
+        app:tint="@color/fab_icon"
+        app:layout_anchor="@id/bottomAppBar"/>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

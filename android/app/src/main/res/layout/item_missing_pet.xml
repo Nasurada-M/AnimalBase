@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:layout_marginStart="4dp"
+    android:layout_marginEnd="4dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="3dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:padding="12dp">
+
+        <!-- ======================================================
+             MISSING PET IMAGE: 80x80 thumbnail
+             Placeholder: @drawable/ic_placeholder_pet
+             ====================================================== -->
+        <ImageView android:id="@+id/ivMissingPetImage"
+            android:layout_width="80dp" android:layout_height="80dp"
+            android:scaleType="centerCrop" android:src="@drawable/ic_placeholder_pet"
+            android:background="@drawable/bg_card"/>
+
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical"
+            android:layout_marginStart="12dp">
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/tvMissingPetName"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:text="Pet Name" android:textSize="15sp" android:textStyle="bold"
+                    android:textColor="@color/text_primary"/>
+                <TextView android:id="@+id/tvMissingStatus"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Missing" android:textSize="10sp" android:textStyle="bold"
+                    android:textColor="@color/text_on_primary" android:background="@drawable/bg_status_badge"
+                    android:backgroundTint="@color/status_missing"
+                    android:paddingStart="6dp" android:paddingEnd="6dp"
+                    android:paddingTop="2dp" android:paddingBottom="2dp"/>
+            </LinearLayout>
+
+            <TextView android:id="@+id/tvMissingPetBreed"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Breed · Type" android:textSize="12sp" android:textColor="@color/text_secondary"/>
+
+            <TextView android:id="@+id/tvLastSeen"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Last seen: Location" android:textSize="11sp"
+                android:textColor="@color/text_secondary" android:layout_marginTop="4dp"/>
+
+            <TextView android:id="@+id/tvReportDate"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Reported: Date" android:textSize="10sp" android:textColor="@color/text_hint"/>
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:layout_margin="4dp" app:cardCornerRadius="10dp" app:cardElevation="2dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="12dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:id="@+id/tvPetName"
+                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="Pet Name" android:textSize="15sp" android:textStyle="bold"
+                android:textColor="@color/text_primary"/>
+            <TextView android:id="@+id/tvStatus"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Under Review" android:textSize="11sp" android:textStyle="bold"/>
+        </LinearLayout>
+        <TextView android:id="@+id/tvShelterName"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Shelter Name" android:textSize="12sp" android:textColor="@color/text_secondary"/>
+        <TextView android:id="@+id/tvDate"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Date" android:textSize="11sp" android:textColor="@color/text_hint"
+            android:layout_marginTop="4dp"/>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

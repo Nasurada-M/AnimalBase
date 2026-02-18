@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+======================================================
+BOTTOM NAV ICONS: Change icons by replacing the drawables below
+  ic_home      -> res/drawable/ic_home.xml
+  ic_adopt     -> res/drawable/ic_adopt.xml
+  ic_missing   -> res/drawable/ic_missing.xml
+  ic_book      -> res/drawable/ic_book.xml
+The center "+" FAB is in layout, NOT in this menu.
+======================================================
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@drawable/ic_home"
+        android:title="@string/nav_home" />
+    <item
+        android:id="@+id/nav_adopt"
+        android:icon="@drawable/ic_adopt"
+        android:title="@string/nav_adopt" />
+    <!-- Center placeholder for FAB spacing -->
+    <item
+        android:id="@+id/nav_placeholder"
+        android:icon="@drawable/ic_transparent"
+        android:title="" />
+    <item
+        android:id="@+id/nav_missing"
+        android:icon="@drawable/ic_missing"
+        android:title="@string/nav_missing" />
+    <item
+        android:id="@+id/nav_encyclopedia"
+        android:icon="@drawable/ic_book"
+        android:title="@string/nav_encyclopedia" />
+</menu>

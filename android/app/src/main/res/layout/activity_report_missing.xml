@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/primary"
+        app:navigationIcon="@drawable/ic_back"
+        app:title="Report Missing Pet"
+        app:titleTextColor="@color/text_on_primary"/>
+
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="16dp">
+
+            <!-- Pet Photos Upload -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Pet Photos" android:textSize="14sp" android:textStyle="bold"
+                android:textColor="@color/primary" android:layout_marginBottom="8dp"/>
+
+            <!-- ======================================================
+                 PHOTO UPLOAD: Max 5 photos per report
+                 Tap "Add Photos" to pick from gallery or camera
+                 Photos stored in backend /uploads/missing/
+                 ====================================================== -->
+            <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="16dp">
+                <LinearLayout android:id="@+id/llPhotoContainer"
+                    android:layout_width="wrap_content" android:layout_height="100dp"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAddPhotos"
+                        style="@style/Widget.AnimalBase.Button.Outline"
+                        android:layout_width="90dp" android:layout_height="90dp"
+                        android:text="+ Photo" android:textSize="11sp"/>
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <!-- Pet Info -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Pet Information" android:textSize="14sp" android:textStyle="bold"
+                android:textColor="@color/primary" android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilPetName"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="Pet Name *" android:layout_marginBottom="12dp">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etPetName"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="textPersonName"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Pet Type Dropdown -->
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilPetType"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="Pet Type *" android:layout_marginBottom="12dp">
+                <AutoCompleteTextView android:id="@+id/acPetType"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="none"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilBreed"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="Breed" android:layout_marginBottom="12dp">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etBreed"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Gender Row -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:layout_marginBottom="12dp">
+                <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilGender"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:hint="Gender" android:layout_marginEnd="8dp">
+                    <AutoCompleteTextView android:id="@+id/acGender"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:inputType="none"/>
+                </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilAgeCategory"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                    android:hint="Age Category">
+                    <AutoCompleteTextView android:id="@+id/acAgeCategory"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:inputType="none"/>
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilColor"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="Color / Appearance *" android:layout_marginBottom="12dp">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etColor"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="textMultiLine" android:minLines="2"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilFeatures"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="Distinctive Features" android:layout_marginBottom="16dp">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etFeatures"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="textMultiLine" android:minLines="2"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Incident Details -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Incident Details" android:textSize="14sp" android:textStyle="bold"
+                android:textColor="@color/primary" android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilDateLastSeen"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="Date Last Seen *" android:layout_marginBottom="12dp"
+                app:endIconMode="custom" app:endIconDrawable="@android:drawable/ic_menu_today">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etDateLastSeen"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="none" android:focusable="false" android:clickable="true"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilLocation"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="Location Last Seen *" android:layout_marginBottom="12dp">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etLocation"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="textMultiLine"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Map Preview -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPickOnMap"
+                style="@style/Widget.AnimalBase.Button.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/open_map"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Contact Info -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Contact Information" android:textSize="14sp" android:textStyle="bold"
+                android:textColor="@color/primary" android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilContactNumber"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="Contact Number *" android:layout_marginBottom="12dp">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etContactNumber"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="phone"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilAltContact"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="Alternate Contact" android:layout_marginBottom="12dp">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etAltContact"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="phone"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilContactEmail"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="Email *" android:layout_marginBottom="12dp">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etContactEmail"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="textEmailAddress"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilReward"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="Reward Offered (optional)" android:layout_marginBottom="24dp"
+                app:prefixText="₱">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etReward"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <ProgressBar android:id="@+id/progressBar"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_gravity="center" android:visibility="gone"/>
+        </LinearLayout>
+    </ScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSubmitReport"
+        style="@style/Widget.AnimalBase.Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:text="Submit Report"/>
+</LinearLayout>
