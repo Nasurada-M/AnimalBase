@@ -6,7 +6,7 @@ import kotlinx.parcelize.Parcelize
 
 // ─── Request Models ───────────────────────────────────────────────────────────
 
-data class LoginRequest(val email: String, val password: String, val fcm_token: String? = null)
+data class LoginRequest(val email: String, val password: String)
 data class RegisterRequest(val full_name: String, val email: String, val password: String, val phone_number: String? = null, val address: String? = null)
 data class ForgotPasswordRequest(val email: String)
 data class UpdateProfileRequest(val full_name: String? = null, val phone_number: String? = null, val alternate_phone: String? = null, val address: String? = null, val email: String? = null)

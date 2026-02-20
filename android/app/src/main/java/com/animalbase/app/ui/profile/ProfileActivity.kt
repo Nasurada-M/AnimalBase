@@ -19,7 +19,7 @@ import java.io.File
 class ProfileActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityProfileBinding
-    private val api by lazy { RetrofitClient.getApiService(this) }
+    private val api     by lazy { RetrofitClient.getApiService(this) }
     private val session by lazy { SessionManager(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,9 +39,9 @@ class ProfileActivity : AppCompatActivity() {
                 if (response.isSuccessful) {
                     val user = response.body()?.user ?: return@launch
                     session.saveUser(user)
-                    binding.tvProfileName.text = user.fullName
+                    binding.tvProfileName.text  = user.fullName
                     binding.tvProfileEmail.text = user.email
-                    binding.tvMemberSince.text = "Member since ${user.memberSince?.formatDateTime() ?: ""}"
+                    binding.tvMemberSince.text  = "Member since ${user.memberSince?.formatDateTime() ?: ""}"
                     val photoUrl = user.profilePhotoUrl ?: user.profilePhoto
                     ImageLoader.loadProfileImage(this@ProfileActivity, photoUrl, binding.ivProfilePhoto)
                 }
@@ -52,25 +52,18 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        binding.fabEditPhoto.setOnClickListener { pickProfilePhoto() }
-        binding.ivProfilePhoto.setOnClickListener { pickProfilePhoto() }
+        binding.fabEditPhoto.setOnClickListener  { pickProfilePhoto() }
+        binding.ivProfilePhoto.setOnClickListener{ pickProfilePhoto() }
 
-        binding.itemEditProfile.setOnClickListener {
-            startActivity(Intent(this, EditProfileActivity::class.java))
-        }
-        binding.itemChangePassword.setOnClickListener {
-            startActivity(Intent(this, ChangePasswordActivity::class.java))
-        }
-        binding.itemMyApplications.setOnClickListener {
-            startActivity(Intent(this, MyApplicationsActivity::class.java))
-        }
-        binding.itemMyReports.setOnClickListener {
-            startActivity(Intent(this, MyReportsActivity::class.java))
-        }
-        binding.itemNotifications.setOnClickListener {
-            startActivity(Intent(this, NotificationsActivity::class.java))
-        }
+        binding.itemEditProfile.setOnClickListener    { startActivity(Intent(this, EditProfileActivity::class.java)) }
+        binding.itemChangePassword.setOnClickListener { startActivity(Intent(this, ChangePasswordActivity::class.java)) }
+        binding.itemMyApplications.setOnClickListener{ startActivity(Intent(this, MyApplicationsActivity::class.java)) }
+        binding.itemMyReports.setOnClickListener     { startActivity(Intent(this, MyReportsActivity::class.java)) }
+        binding.itemNotifications.setOnClickListener { startActivity(Intent(this, NotificationsActivity::class.java)) }
+
         binding.btnLogout.setOnClickListener {
+            // Cancel WorkManager polling on logout (no Firebase to unregister)
+            NotificationPollingWorker.cancel(this)
             session.logout()
             startActivity(Intent(this, LoginActivity::class.java))
             finishAffinity()
@@ -79,8 +72,7 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun pickProfilePhoto() {
         ImagePicker.with(this)
-            .crop().compress(1024)
-            .maxResultSize(1080, 1080)
+            .crop().compress(1024).maxResultSize(1080, 1080)
             .start { resultCode, data ->
                 if (resultCode == RESULT_OK) {
                     val file = ImagePicker.getFile(data) ?: return@start
@@ -108,8 +100,5 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        loadProfile()
-    }
+    override fun onResume() { super.onResume(); loadProfile() }
 }

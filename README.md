@@ -1,6 +1,23 @@
-# AnimalBase - Full Stack Pet Management App
+# AnimalBase — Full Stack Android App
+### 100% PostgreSQL · No Firebase · No Paid Services
 
-A complete Android + Node.js app for pet adoption, missing pets reporting, sightings, and animal encyclopedia.
+---
+
+## NOTIFICATION ARCHITECTURE (Zero Cost)
+
+```
+┌─────────────┐  WebSocket (OkHttp)   ┌──────────────────────────────┐
+│ Android App │ ◄──────────────────── │  Node.js backend (ws)        │
+│             │                        │  ws://host:3000/ws?token=JWT │
+│ WorkManager │ ──HTTP poll (15 min)──►│  GET /api/notifications      │
+│             │                        │  PostgreSQL notifications    │
+└─────────────┘                        └──────────────────────────────┘
+```
+
+**Real-time (app open):** OkHttp WebSocket → Android NotificationManager  
+**Background fallback:** WorkManager PeriodicWork → REST poll → Android NotificationManager  
+**Storage:** PostgreSQL `notifications` table (already in schema)  
+**Cost:** $0 — no Firebase, no APNs, no third-party accounts
 
 ---
 
@@ -8,9 +25,34 @@ A complete Android + Node.js app for pet adoption, missing pets reporting, sight
 
 ```
 AnimalBase/
-├── backend/           ← Node.js + Express REST API
-├── android/           ← Android Studio project (Kotlin)
-├── database/          ← PostgreSQL schema
+├── backend/           ← Node.js + Express + WebSocket (ws)
+│   └── src/
+│       ├── config/
+│       │   ├── database.js     PostgreSQL pool
+│       │   └── websocket.js    WS server (replaces Firebase Admin)
+│       ├── middleware/
+│       │   ├── auth.js         JWT verification
+│       │   ├── upload.js       Multer file upload
+│       │   └── validation.js   express-validator error handler
+│       └── routes/             auth, users, pets, missing-pets,
+│                               sightings, adoptions, encyclopedia,
+│                               notifications
+├── android/           ← Kotlin, Android Studio Panda 1
+│   └── app/src/main/
+│       ├── java/com/animalbase/app/
+│       │   ├── utils/
+│       │   │   ├── WebSocketManager.kt       real-time push
+│       │   │   ├── NotificationPollingWorker.kt  background poll
+│       │   │   ├── NotificationHelper.kt     local Android notifications
+│       │   │   ├── SessionManager.kt         JWT storage
+│       │   │   ├── ImageLoader.kt            Glide wrapper
+│       │   │   ├── ValidationUtils.kt        form checkers
+│       │   │   └── Extensions.kt             Kotlin helpers
+│       │   ├── api/     Retrofit + OkHttp
+│       │   ├── models/  Kotlin data classes
+│       │   └── ui/      all screens
+│       └── res/         layouts, drawables, values
+├── database/schema.sql
 └── README.md
 ```
 
@@ -25,35 +67,34 @@ AnimalBase/
 | PostgreSQL | 12+ |
 | JDK | 17+ |
 
+**No Firebase account needed.**  
+**No google-services.json needed.**
+
 ---
 
-## STEP 1: DATABASE SETUP (PostgreSQL)
+## STEP 1 — DATABASE SETUP (PostgreSQL)
 
 ```bash
-# 1. Open pgAdmin or psql
-# 2. Create a new database
-CREATE DATABASE animalbase;
+# Create database
+psql -U postgres -c "CREATE DATABASE animalbase;"
 
-# 3. Run the schema
+# Run schema
 psql -U postgres -d animalbase -f database/schema.sql
-# OR open database/schema.sql in pgAdmin Query Tool and execute
 ```
+
+Or open `database/schema.sql` in pgAdmin Query Tool and Execute.
 
 ---
 
-## STEP 2: BACKEND SETUP (Node.js)
+## STEP 2 — BACKEND SETUP (Node.js)
 
 ```bash
 cd backend
-
-# Install dependencies
 npm install
-
-# Copy env file and edit values
 cp .env.example .env
 ```
 
-### Edit `.env`:
+Edit `.env`:
 ```
 DB_HOST=localhost
 DB_PORT=5432
@@ -61,237 +102,217 @@ DB_NAME=animalbase
 DB_USER=postgres
 DB_PASSWORD=YOUR_POSTGRES_PASSWORD
 JWT_SECRET=change_this_to_a_long_random_string
-BASE_URL=http://10.0.2.2:3000        # For Android Emulator
-# BASE_URL=http://YOUR_PC_IP:3000    # For physical device
-GOOGLE_MAPS_API_KEY=YOUR_KEY
+BASE_URL=http://10.0.2.2:3000      # emulator
+# BASE_URL=http://192.168.x.x:3000  # physical device
 ```
-
-### Firebase (Push Notifications):
-1. Go to https://console.firebase.google.com/
-2. Create a project → Add Android app → Package: `com.animalbase.app`
-3. Download `google-services.json` → place in `android/app/google-services.json`
-4. Go to Project Settings → Service Accounts → Generate new private key
-5. Save as `backend/src/config/serviceAccountKey.json`
 
 ```bash
-# Start the server
-npm start
-# OR with auto-reload:
-npm run dev
+# Start server
+npm start        # production
+npm run dev      # dev (auto-reload with nodemon)
 
-# Test:
+# Verify
 curl http://localhost:3000/api/health
+# → {"success":true,"notifications":"WebSocket + PostgreSQL (no Firebase)"}
 ```
+
+The server exposes:
+- **REST API** on `http://HOST:3000/api/...`
+- **WebSocket** on `ws://HOST:3000/ws?token=JWT`
 
 ---
 
-## STEP 3: ANDROID SETUP (Android Studio Panda 1)
+## STEP 3 — ANDROID SETUP (Android Studio Panda 1)
 
-### A. Open Project
-1. Open Android Studio Panda 1
-2. `File` → `Open` → select the `android/` folder
-3. Wait for Gradle sync
+### A. Open the project
+1. `File` → `Open` → select the `android/` folder
+2. Wait for Gradle sync (first sync downloads dependencies — needs internet)
 
-### B. Google Maps API Key
-1. Go to https://console.cloud.google.com/
-2. Create API key → Enable **Maps SDK for Android** + **Geocoding API**
-3. Open `android/app/build.gradle` (line ~27):
-   ```gradle
-   resValue "string", "google_maps_key", "YOUR_GOOGLE_MAPS_API_KEY"
-   ```
-   Replace `YOUR_GOOGLE_MAPS_API_KEY` with your key.
+### B. Set backend URL
+Open `android/app/build.gradle` — **two** values to set (lines ~20–28):
 
-### C. Firebase
-1. Copy your `google-services.json` (from Firebase) into `android/app/`
-2. The push notification setup is done automatically
-
-### D. Set Backend URL
-Open `android/app/build.gradle` (line ~20):
 ```gradle
+// REST API (line 20)
 buildConfigField "String", "BASE_URL", '"http://10.0.2.2:3000"'
-```
-- **Emulator**: keep `http://10.0.2.2:3000`
-- **Physical device**: change to `http://YOUR_PC_LAN_IP:3000`
-  (find your IP with `ipconfig` on Windows or `ifconfig` on Mac/Linux)
 
-### E. Run
-- Select an AVD or connect device
-- Click **Run** ▶
+// WebSocket (line 27 — same host, different scheme)
+buildConfigField "String", "WS_URL", '"ws://10.0.2.2:3000/ws"'
+```
+
+| Environment | BASE_URL | WS_URL |
+|-------------|----------|--------|
+| Emulator | `http://10.0.2.2:3000` | `ws://10.0.2.2:3000/ws` |
+| Physical device (same WiFi) | `http://192.168.x.x:3000` | `ws://192.168.x.x:3000/ws` |
+| Production | `https://yourdomain.com` | `wss://yourdomain.com/ws` |
+
+### C. Google Maps API Key (only for the map screen)
+1. Go to https://console.cloud.google.com/
+2. APIs & Services → Create Key → Enable **Maps SDK for Android**
+3. In `android/app/build.gradle` (line ~33):
+   ```gradle
+   resValue "string", "google_maps_key", "YOUR_ACTUAL_KEY_HERE"
+   ```
+
+### D. Run
+- Select an AVD or connect a device → click **Run ▶**
+
+**No `google-services.json` needed.  No Firebase plugin.  No FCM token.**
+
+---
+
+## HOW NOTIFICATIONS WORK (no Firebase)
+
+### When the app is open (foreground)
+`MainActivity.onStart()` → `WebSocketManager.connect()` → OkHttp opens a persistent WebSocket  
+Backend sends a JSON frame → `WebSocketManager` receives it → `NotificationHelper.show()` posts a local Android notification.
+
+### When the app is in the background
+`WorkManager` runs `NotificationPollingWorker` every **15 minutes** (Android minimum).  
+It calls `GET /api/notifications`, finds unread items, and posts local notifications.
+
+### When the user opens the Notifications screen
+It calls `GET /api/notifications` directly and shows the full list from PostgreSQL.
 
 ---
 
 ## HOW TO CHANGE PLACEHOLDER IMAGES
 
-### App Logo / Splash Screen
-- **File**: `android/app/src/main/res/layout/activity_splash.xml` (line ~20)
-- **File**: `android/app/src/main/res/layout/activity_login.xml` (line ~20)
-- Replace `android:src="@drawable/ic_placeholder_pet"` with your logo drawable
-
-### Pet Placeholder Image
-- **File**: `android/app/src/main/java/com/animalbase/app/utils/ImageLoader.kt` (line ~22)
-- Change `R.drawable.ic_placeholder_pet` to your drawable
-- OR replace `android/app/src/main/res/drawable/ic_placeholder_pet.xml`
-
-### User Profile Placeholder
-- **File**: `android/app/src/main/java/com/animalbase/app/utils/ImageLoader.kt` (line ~34)
-- Change `R.drawable.ic_placeholder_person` to your drawable
-- OR replace `android/app/src/main/res/drawable/ic_placeholder_person.xml`
-
-### App Launcher Icon
-- Right-click `res` folder in Android Studio → `New` → `Image Asset`
-- Follow wizard to set your icon for all densities
-- OR replace files in:
-  - `res/mipmap-hdpi/ic_launcher.xml` (72×72)
-  - `res/mipmap-mdpi/ic_launcher.xml` (48×48)
-  - `res/mipmap-xhdpi/ic_launcher.xml` (96×96)
-  - `res/mipmap-xxhdpi/ic_launcher.xml` (144×144)
-  - `res/mipmap-xxxhdpi/ic_launcher.xml` (192×192)
+| What | Where | Line |
+|------|-------|------|
+| Pet image placeholder | `utils/ImageLoader.kt` | 22 |
+| Profile image placeholder | `utils/ImageLoader.kt` | 34 |
+| Splash / Login logo | `res/layout/activity_splash.xml` | 20 |
+| App launcher icon | `res/mipmap-*/ic_launcher.xml` | replace files |
 
 ---
 
-## HOW TO CHANGE APP ICONS (BOTTOM NAV & TOOLBAR)
+## HOW TO CHANGE ICONS
 
-| Icon | File | Description |
-|------|------|-------------|
-| Home Tab | `res/drawable/ic_home.xml` | Bottom nav home |
-| Adopt Tab | `res/drawable/ic_adopt.xml` | Bottom nav adopt |
-| Missing Tab | `res/drawable/ic_missing.xml` | Bottom nav missing |
-| Encyclopedia Tab | `res/drawable/ic_book.xml` | Bottom nav encyclopedia |
-| Center "+" FAB | `res/drawable/ic_add.xml` | Floating action button |
-| Push Notification | `res/drawable/ic_notification.xml` | Notification tray icon |
-| Back Arrow | `res/drawable/ic_back.xml` | Toolbar back button |
-| Profile Avatar | `res/drawable/ic_placeholder_person.xml` | Default profile image |
+| Icon | File |
+|------|------|
+| Home tab | `res/drawable/ic_home.xml` |
+| Adopt tab | `res/drawable/ic_adopt.xml` |
+| Missing tab | `res/drawable/ic_missing.xml` |
+| Encyclopedia tab | `res/drawable/ic_book.xml` |
+| Center "+" FAB | `res/drawable/ic_add.xml` |
+| Notification tray | `res/drawable/ic_notification.xml` |
+| Back arrow | `res/drawable/ic_back.xml` |
 
-To replace any icon:
-1. Open the `.xml` file
-2. Replace the `pathData` value with your SVG path
-3. OR use Android Studio → `File` → `New` → `Vector Asset`
+Replace any `.xml` file with your own SVG-path vector drawable,  
+OR use **Android Studio → File → New → Vector Asset**.
 
 ---
 
-## HOW TO CHANGE APP COLORS
+## HOW TO CHANGE COLORS
 
-Open `android/app/src/main/res/values/colors.xml`:
+`res/values/colors.xml`:
 
-| Color Name | Purpose | Default |
-|-----------|---------|---------|
-| `primary` | Main brand color, buttons, nav bar | `#4CAF50` (green) |
-| `primary_dark` | Status bar, dark variant | `#388E3C` |
-| `secondary` | Accent color | `#FF8F00` (amber) |
+| Name | Purpose | Default |
+|------|---------|---------|
+| `primary` | Main brand color | `#4CAF50` |
+| `secondary` | Accent | `#FF8F00` |
 | `background` | Screen backgrounds | `#F5F5F5` |
-| `status_available` | Available pet badge | `#4CAF50` |
-| `status_pending` | Pending pet badge | `#FF9800` |
+| `status_available` | Available badge | `#4CAF50` |
+| `status_pending` | Pending badge | `#FF9800` |
 | `status_rejected` | Rejected badge | `#F44336` |
-| `status_missing` | Missing pet badge | `#F44336` |
-| `fab_background` | Center "+" FAB color | `#4CAF50` |
-| `nav_bar_selected` | Active nav tab | `#4CAF50` |
+| `fab_background` | Center "+" FAB | `#4CAF50` |
 
 ---
 
-## API ENDPOINTS REFERENCE
+## API ENDPOINTS
+
+All authenticated endpoints require: `Authorization: Bearer JWT`
 
 ### Auth
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | Login |
-| POST | `/api/auth/forgot-password` | Password reset |
+| Method | Endpoint | Body |
+|--------|----------|------|
+| POST | `/api/auth/register` | `full_name, email, password, phone_number?` |
+| POST | `/api/auth/login` | `email, password` |
+| POST | `/api/auth/forgot-password` | `email` |
 
 ### Users
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/users/profile` | ✓ | Get profile |
-| PUT | `/api/users/profile` | ✓ | Update profile |
-| POST | `/api/users/profile-photo` | ✓ | Upload profile photo |
-| PUT | `/api/users/change-password` | ✓ | Change password |
-| GET | `/api/users/my-reports` | ✓ | Get my reports |
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| GET | `/api/users/profile` | ✓ |
+| PUT | `/api/users/profile` | ✓ |
+| POST | `/api/users/profile-photo` | ✓ multipart |
+| PUT | `/api/users/change-password` | ✓ |
+| GET | `/api/users/my-reports` | ✓ |
 
-### Pets (Adoption)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/pets` | List available pets (filter: type, status, search) |
-| GET | `/api/pets/:id` | Get pet details |
-| POST | `/api/pets` | Add pet (admin) |
-| PUT | `/api/pets/:id/status` | Update pet status |
+### Pets
+| Method | Endpoint | Notes |
+|--------|----------|-------|
+| GET | `/api/pets` | `?type=Dog&status=Available&search=text` |
+| GET | `/api/pets/:id` | |
+| PUT | `/api/pets/:id/status` | `Available` / `Pending` / `Adopted` |
 
 ### Missing Pets
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/missing-pets` | - | List missing pets |
-| GET | `/api/missing-pets/:id` | - | Get details + sightings |
-| POST | `/api/missing-pets` | ✓ | Report missing pet |
-| PUT | `/api/missing-pets/:id/status` | ✓ | Update status |
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| GET | `/api/missing-pets` | |
+| GET | `/api/missing-pets/:id` | |
+| POST | `/api/missing-pets` | ✓ multipart (up to 5 photos) |
+| PUT | `/api/missing-pets/:id/status` | ✓ |
 
 ### Sightings
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/sightings` | Submit sighting report |
-| GET | `/api/sightings` | List sightings |
+| Method | Endpoint | Notes |
+|--------|----------|-------|
+| POST | `/api/sightings` | multipart; auto-notifies pet owner via WS + DB |
+| GET | `/api/sightings` | `?missing_pet_id=N` |
 
 ### Adoptions
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/adoptions` | ✓ | Submit application |
-| GET | `/api/adoptions/my-applications` | ✓ | My applications |
-| GET | `/api/adoptions/:id` | ✓ | Application details |
-| PUT | `/api/adoptions/:id/review` | ✓ | Review application (admin) |
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| POST | `/api/adoptions` | ✓ sets pet→Pending, notifies applicant |
+| GET | `/api/adoptions/my-applications` | ✓ |
+| GET | `/api/adoptions/:id` | ✓ |
+| PUT | `/api/adoptions/:id/review` | ✓ sets pet→Adopted/Available, notifies applicant |
 
 ### Encyclopedia
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/encyclopedia` | List animals |
-| GET | `/api/encyclopedia/:id` | Animal details |
-| POST | `/api/encyclopedia/favorites/:id` | Add favorite |
-| DELETE | `/api/encyclopedia/favorites/:id` | Remove favorite |
+| GET | `/api/encyclopedia` | `?category=Mammals&search=text` |
+| GET | `/api/encyclopedia/:id` | |
+| POST | `/api/encyclopedia/favorites/:id` | ✓ |
+| DELETE | `/api/encyclopedia/favorites/:id` | ✓ |
 
 ### Notifications
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/notifications` | ✓ | List notifications |
-| PUT | `/api/notifications/:id/read` | ✓ | Mark read |
-| PUT | `/api/notifications/read-all` | ✓ | Mark all read |
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| GET | `/api/notifications` | ✓ |
+| PUT | `/api/notifications/:id/read` | ✓ |
+| PUT | `/api/notifications/read-all` | ✓ |
 
----
+### WebSocket
+```
+ws://HOST:3000/ws?token=JWT
 
-## FEATURES IMPLEMENTED
-
-- ✅ User registration with format validation (email, password strength, phone)
-- ✅ JWT authentication
-- ✅ Profile photo upload (Multer)
-- ✅ Adoption application with format validation
-- ✅ Pet status: Available → Pending → Adopted/Rejected
-- ✅ Missing pet report with photos and map location
-- ✅ Sighting reports with photos and map
-- ✅ Push notifications (Firebase Cloud Messaging)
-- ✅ Bottom navigation with center "+" FAB
-- ✅ Google Maps integration (pick & view locations)
-- ✅ Animal encyclopedia with favorites
-- ✅ Full-text search (PostgreSQL GIN indexes)
-- ✅ File upload validation (jpg, jpeg, png, gif, webp — max 10MB)
-- ✅ Auto-notify pet owner on new sighting
-- ✅ Auto-update pet status on application review
+Server → client frame:
+{
+  "type": "notification",
+  "title": "New Sighting Report!",
+  "message": "Someone spotted your pet near...",
+  "related_id": 42
+}
+```
 
 ---
 
 ## TROUBLESHOOTING
 
-**Cannot connect to backend from emulator:**
-- Make sure backend is running: `npm start`
-- Use `http://10.0.2.2:3000` (not `localhost`) for emulator
+**Cannot connect to backend from emulator:**  
+Use `http://10.0.2.2:3000` (not `localhost`).
 
-**Cannot connect from physical device:**
-- Use your PC's LAN IP: `http://192.168.x.x:3000`
-- Make sure your phone and PC are on the same WiFi
+**Cannot connect from physical device:**  
+Use your PC's LAN IP: `http://192.168.x.x:3000`.  
+Both devices must be on the same WiFi.
 
-**Gradle sync fails:**
-- `File` → `Invalidate Caches and Restart`
-- Check internet connection (Gradle downloads dependencies)
+**WebSocket not receiving notifications:**  
+Check `WS_URL` in `app/build.gradle` (line ~27) matches your backend host.
 
-**Maps not showing:**
-- Verify Google Maps API key in `build.gradle`
-- Enable **Maps SDK for Android** in Google Cloud Console
+**WorkManager not triggering:**  
+Minimum interval is 15 min. Use Android Studio's **Background Task Inspector** to verify the job is enqueued.
 
-**Push notifications not working:**
-- Verify `google-services.json` is in `android/app/`
-- Verify `serviceAccountKey.json` is in `backend/src/config/`
-- Test on real device (FCM doesn't work on some emulators)
+**Gradle sync fails:**  
+`File` → `Invalidate Caches and Restart`. Check internet connection.
+
+**Maps not showing:**  
+Verify Google Maps API key in `build.gradle` line ~33 and enable Maps SDK for Android in Google Cloud Console.

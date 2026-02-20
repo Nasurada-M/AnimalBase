@@ -44,7 +44,7 @@ router.post('/login', [
   validate,
 ], async (req, res) => {
   try {
-    const { email, password, fcm_token } = req.body;
+    const { email, password } = req.body;
     const result = await db.query('SELECT * FROM users WHERE email = $1 AND is_active = true', [email]);
     if (result.rows.length === 0)
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
@@ -52,9 +52,6 @@ router.post('/login', [
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match)
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
-    if (fcm_token) {
-      await db.query('UPDATE users SET updated_at = NOW() WHERE user_id = $1', [user.user_id]);
-    }
     const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
     const { password_hash, reset_token, reset_token_expiry, ...safeUser } = user;
     res.json({ success: true, message: 'Login successful', token, user: safeUser });
