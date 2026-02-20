@@ -1,8 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'com.google.gms.google-services'
     id 'kotlin-parcelize'
+    // ← google-services plugin REMOVED (no Firebase)
 }
 
 android {
@@ -15,18 +15,29 @@ android {
         targetSdk 34
         versionCode 1
         versionName "1.0"
+
         // ======================================================
         // CHANGE API BASE URL HERE (line ~20):
-        // For emulator: "http://10.0.2.2:3000"
-        // For physical device: "http://YOUR_PC_IP:3000"
-        // For production: "https://yourdomain.com"
+        //   Emulator  → "http://10.0.2.2:3000"
+        //   Physical device → "http://YOUR_PC_LAN_IP:3000"
+        //   Production → "https://yourdomain.com"
         // ======================================================
         buildConfigField "String", "BASE_URL", '"http://10.0.2.2:3000"'
+
         // ======================================================
-        // CHANGE GOOGLE MAPS API KEY HERE (line ~27):
-        // Get key from: https://console.cloud.google.com/
+        // WEBSOCKET URL (line ~27) — must match BASE_URL host/port
+        //   Emulator  → "ws://10.0.2.2:3000/ws"
+        //   Physical  → "ws://YOUR_PC_LAN_IP:3000/ws"
+        // ======================================================
+        buildConfigField "String", "WS_URL", '"ws://10.0.2.2:3000/ws"'
+
+        // ======================================================
+        // GOOGLE MAPS API KEY (line ~33):
+        //   Get key from https://console.cloud.google.com/
+        //   Enable: Maps SDK for Android + Geocoding API
         // ======================================================
         resValue "string", "google_maps_key", "YOUR_GOOGLE_MAPS_API_KEY"
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -62,7 +73,10 @@ dependencies {
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     implementation 'androidx.viewpager2:viewpager2:1.0.0'
 
-    // Networking
+    // WorkManager — background notification polling (replaces Firebase background delivery)
+    implementation 'androidx.work:work-runtime-ktx:2.9.0'
+
+    // Networking (Retrofit + OkHttp — OkHttp also provides WebSocket client)
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
@@ -70,8 +84,7 @@ dependencies {
 
     // Image Loading
     // ======================================================
-    // PLACEHOLDER IMAGES: Use Glide's placeholder() and error() methods
-    // See: app/src/main/java/com/animalbase/app/utils/ImageLoader.kt (line ~15)
+    // PLACEHOLDER IMAGES: see utils/ImageLoader.kt lines ~22 & ~34
     // ======================================================
     implementation 'com.github.bumptech.glide:glide:4.16.0'
 
@@ -79,17 +92,12 @@ dependencies {
     implementation 'com.google.android.gms:play-services-maps:18.2.0'
     implementation 'com.google.android.gms:play-services-location:21.1.0'
 
-    // Firebase Push Notifications
-    implementation platform('com.google.firebase:firebase-bom:32.7.1')
-    implementation 'com.google.firebase:firebase-messaging-ktx'
+    // ← Firebase / FCM entirely removed — no google-services.json needed
 
     // Image Picker
     implementation 'io.github.dhaval2404:imagepicker:2.1'
 
-    // Shared Preferences / Security
-    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
-
-    // Circular Image View
+    // Circular ImageView
     implementation 'de.hdodenhof:circleimageview:3.1.0'
 
     // Dots Indicator (ViewPager)

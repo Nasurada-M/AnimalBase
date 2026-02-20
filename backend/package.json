@@ -1,7 +1,7 @@
 {
   "name": "animalbase-backend",
   "version": "1.0.0",
-  "description": "AnimalBase Backend API",
+  "description": "AnimalBase Backend API — 100% PostgreSQL, no Firebase",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
@@ -13,12 +13,12 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-validator": "^7.0.1",
-    "firebase-admin": "^11.11.1",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "pg": "^8.11.3",
     "sharp": "^0.32.6",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "ws": "^8.16.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
