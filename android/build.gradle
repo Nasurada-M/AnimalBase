@@ -1,0 +1,20 @@
+// Top-level build file; no Firebase and no google-services plugin.
+plugins {
+    id 'com.android.application' version '8.1.4' apply false
+    id 'org.jetbrains.kotlin.android' version '1.9.10' apply false
+    // google-services removed because this app uses WebSocket + PostgreSQL notifications.
+}
+
+def localBuildRoot = new File(
+    System.getenv("LOCALAPPDATA") ?: System.getProperty("java.io.tmpdir"),
+    "AnimalBase/android-build"
+)
+
+allprojects {
+    // Keep Gradle build output outside OneDrive to avoid Windows file-lock delete failures.
+    layout.buildDirectory.set(new File(localBuildRoot, project.name))
+}
+
+tasks.register("clean", Delete) {
+    delete localBuildRoot
+}

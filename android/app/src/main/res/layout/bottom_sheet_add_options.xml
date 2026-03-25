@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+======================================================
+ADD OPTIONS BOTTOM SHEET: Shown when FAB "+" is tapped
+Accessible from MainActivity center FAB button
+======================================================
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="vertical" android:padding="24dp"
+    android:background="@color/surface">
+
+    <View android:layout_width="40dp" android:layout_height="4dp"
+        android:layout_gravity="center" android:background="@color/divider"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="What would you like to do?" android:textSize="16sp"
+        android:textStyle="bold" android:textColor="@color/text_primary"
+        android:layout_marginBottom="16dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnReportMissing"
+        style="@style/Widget.AnimalBase.Button"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="🐾  Report Missing Pet"
+        android:layout_marginBottom="8dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnReportSighting"
+        style="@style/Widget.AnimalBase.Button.Outline"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="👁  Report a Sighting"
+        android:layout_marginBottom="8dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnGoProfile"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="👤  View My Profile"
+        android:textColor="@color/text_secondary"/>
+
+</LinearLayout>

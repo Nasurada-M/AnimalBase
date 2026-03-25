@@ -1,0 +1,176 @@
+package com.animalbase.app.ui.missing
+
+import android.content.Intent
+import android.graphics.Paint
+import android.net.Uri
+import android.os.Bundle
+import android.view.View
+import androidx.lifecycle.lifecycleScope
+import com.animalbase.app.R
+import com.animalbase.app.api.RetrofitClient
+import com.animalbase.app.databinding.ActivityMissingPetDetailBinding
+import com.animalbase.app.models.MissingPet
+import com.animalbase.app.ui.base.SessionAwareActivity
+import com.animalbase.app.ui.report.ReportSightingActivity
+import com.animalbase.app.utils.formatWeightForDisplay
+import com.animalbase.app.utils.ImageLoader
+import com.animalbase.app.utils.formatDisplayDate
+import com.animalbase.app.utils.PhpCurrencyFormatter
+import com.animalbase.app.utils.showToast
+import kotlinx.coroutines.launch
+
+class MissingPetDetailActivity : SessionAwareActivity() {
+
+    private lateinit var binding: ActivityMissingPetDetailBinding
+    private val api by lazy { RetrofitClient.getApiService(this) }
+    private var missingPetId: Int = 0
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityMissingPetDetailBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        setSupportActionBar(binding.toolbar)
+        binding.toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+
+        missingPetId = intent.getIntExtra("missing_pet_id", 0)
+        if (missingPetId > 0) loadMissingPet()
+    }
+
+    private fun loadMissingPet() {
+        lifecycleScope.launch {
+            try {
+                val response = api.getMissingPetById(missingPetId)
+                if (response.isSuccessful) {
+                    response.body()?.let(::bindPet)
+                } else {
+                    showToast("Failed to load missing pet")
+                }
+            } catch (e: Exception) {
+                showToast(e.message ?: "Failed to load missing pet")
+            }
+        }
+    }
+
+    private fun bindPet(pet: MissingPet) {
+        val currentUser = session.getUser()
+        val normalizedUserEmail = currentUser?.email?.trim()?.lowercase().orEmpty()
+        val isOwner =
+            (pet.reportedById != null && pet.reportedById == currentUser?.effectiveUserId)
+            || (
+                normalizedUserEmail.isNotBlank()
+                && pet.ownerEmail?.trim()?.lowercase() == normalizedUserEmail
+            )
+        val imageUrl = pet.photoUrls.firstOrNull() ?: pet.photos.firstOrNull() ?: pet.imageUrl
+        val reward = PhpCurrencyFormatter.formatRewardValue(pet.rewardOffered)
+        val features = pet.distinctiveFeatures?.takeIf { it.isNotBlank() }
+        val contactEmail = pet.email?.takeIf { it.isNotBlank() }
+        val contactNumber = pet.contactNumber?.takeIf { it.isNotBlank() }
+        val formattedDate = pet.dateLastSeen?.formatDisplayDate() ?: "Unknown date"
+
+        binding.tvMissingPetName.text = pet.petName
+        binding.tvBreed.text = listOfNotNull(pet.breed, pet.petType).joinToString(" · ")
+        binding.tvStatus.text = pet.status
+        binding.tvStatus.backgroundTintList = android.content.res.ColorStateList.valueOf(
+            getColor(if (pet.status == "Found") R.color.status_found else R.color.status_missing)
+        )
+        binding.tvDescription.text = pet.description ?: "No description provided."
+        binding.tvPetInfo.text = buildString {
+            appendLine("Type: ${pet.petType}")
+            appendLine("Breed: ${pet.breed ?: "Unknown"}")
+            appendLine("Gender: ${pet.gender ?: "Unknown"}")
+            appendLine("Age: ${pet.age ?: "—"}")
+            appendLine("Weight: ${formatWeightForDisplay(pet.weight, "—")}")
+            append("Colour: ${pet.colorAppearance ?: "Unknown"}")
+        }
+        binding.tvLastSeen.text = "Last Seen: ${pet.locationLastSeen ?: "Unknown location"}"
+        binding.tvDateLastSeen.text = "Date: $formattedDate"
+        binding.tvOwnerName.text = pet.ownerName ?: "Unknown reporter"
+        binding.tvContactEmail.text = contactEmail ?: "No email provided"
+        binding.tvContact.text = contactNumber ?: "No phone provided"
+
+        binding.cardReward.visibility = if (reward != null) View.VISIBLE else View.GONE
+        binding.tvReward.text = reward
+
+        binding.tvFeaturesLabel.visibility = if (features != null) View.VISIBLE else View.GONE
+        binding.tvFeatures.visibility = if (features != null) View.VISIBLE else View.GONE
+        binding.tvFeatures.text = features
+
+        ImageLoader.loadPetImage(this, imageUrl, binding.ivMissingPetImage)
+
+        val shouldShowContact = !isOwner && (contactEmail != null || contactNumber != null)
+        binding.cardReporterContact.visibility = if (shouldShowContact) View.VISIBLE else View.GONE
+        binding.btnContactOwner.visibility = if (shouldShowContact && contactNumber != null) View.VISIBLE else View.GONE
+
+        if (contactEmail != null && shouldShowContact) {
+            binding.tvContactEmail.setTextColor(getColor(R.color.primary))
+            binding.tvContactEmail.paintFlags = binding.tvContactEmail.paintFlags or Paint.UNDERLINE_TEXT_FLAG
+            binding.tvContactEmail.setOnClickListener { openGmailCompose(contactEmail) }
+        } else {
+            binding.tvContactEmail.setTextColor(getColor(R.color.text_secondary))
+            binding.tvContactEmail.paintFlags = binding.tvContactEmail.paintFlags and Paint.UNDERLINE_TEXT_FLAG.inv()
+            binding.tvContactEmail.setOnClickListener(null)
+        }
+
+        if (contactNumber != null && shouldShowContact) {
+            binding.tvContact.setTextColor(getColor(R.color.primary))
+            binding.tvContact.paintFlags = binding.tvContact.paintFlags or Paint.UNDERLINE_TEXT_FLAG
+            binding.tvContact.setOnClickListener { openDialer(contactNumber) }
+        } else {
+            binding.tvContact.setTextColor(getColor(R.color.text_secondary))
+            binding.tvContact.paintFlags = binding.tvContact.paintFlags and Paint.UNDERLINE_TEXT_FLAG.inv()
+            binding.tvContact.setOnClickListener(null)
+        }
+
+        binding.btnContactOwner.setOnClickListener {
+            if (contactNumber.isNullOrBlank()) {
+                showToast("No contact number available")
+            } else {
+                openDialer(contactNumber)
+            }
+        }
+
+        binding.btnMarkFound.visibility = if (pet.status == "Missing" && isOwner) View.VISIBLE else View.GONE
+        binding.btnMarkFound.setOnClickListener { markPetAsFound() }
+        binding.btnReportSighting.visibility = if (pet.status == "Missing") View.VISIBLE else View.GONE
+        binding.btnReportSighting.setOnClickListener {
+            startActivity(Intent(this, ReportSightingActivity::class.java).apply {
+                putExtra("missing_pet_id", missingPetId)
+            })
+        }
+    }
+
+    private fun openGmailCompose(email: String) {
+        val gmailUri = Uri.parse("https://mail.google.com/mail/?view=cm&fs=1&to=${Uri.encode(email)}")
+        runCatching {
+            startActivity(Intent(Intent.ACTION_VIEW, gmailUri))
+        }.onFailure {
+            showToast("Unable to open Gmail compose")
+        }
+    }
+
+    private fun openDialer(number: String) {
+        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")))
+    }
+
+    private fun markPetAsFound() {
+        binding.btnMarkFound.isEnabled = false
+
+        lifecycleScope.launch {
+            try {
+                val response = api.markMissingPetFound(missingPetId)
+                if (response.isSuccessful) {
+                    showToast("Report marked as found")
+                    setResult(RESULT_OK)
+                    finish()
+                } else {
+                    showToast("Failed to update report")
+                    binding.btnMarkFound.isEnabled = true
+                }
+            } catch (e: Exception) {
+                showToast(e.message ?: "Failed to update report")
+                binding.btnMarkFound.isEnabled = true
+            }
+        }
+    }
+}

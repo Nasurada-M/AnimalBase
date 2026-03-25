@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F3FF"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="24dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <ImageButton
+                android:id="@+id/btnBack"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_icon_btn"
+                android:contentDescription="Back"
+                android:padding="10dp"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="#3B0764" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="horizontal">
+                <FrameLayout
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="@drawable/bg_logo_badge">
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_paw"
+                        app:tint="#FFFFFF" />
+                </FrameLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="AnimalBase"
+                    android:textColor="#3B0764"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+            <View android:layout_width="40dp" android:layout_height="40dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                <FrameLayout android:id="@+id/stepCircle1" android:layout_width="42dp" android:layout_height="42dp" android:background="@drawable/bg_step_active">
+                    <ImageView android:id="@+id/stepIcon1" android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="center" android:src="@drawable/ic_email" app:tint="#FFFFFF" />
+                </FrameLayout>
+                <TextView android:id="@+id/stepLabel1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Email" android:textColor="#7C3AED" android:textSize="10sp" android:textStyle="bold" />
+            </LinearLayout>
+            <View android:id="@+id/stepLine1" android:layout_width="0dp" android:layout_height="2dp" android:layout_weight="0.6" android:layout_marginBottom="18dp" android:background="@drawable/bg_step_line_inactive" />
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                <FrameLayout android:id="@+id/stepCircle2" android:layout_width="42dp" android:layout_height="42dp" android:background="@drawable/bg_step_inactive">
+                    <ImageView android:id="@+id/stepIcon2" android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="center" android:src="@drawable/ic_key" app:tint="#D1D5DB" />
+                </FrameLayout>
+                <TextView android:id="@+id/stepLabel2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Code" android:textColor="#D1D5DB" android:textSize="10sp" android:textStyle="bold" />
+            </LinearLayout>
+            <View android:id="@+id/stepLine2" android:layout_width="0dp" android:layout_height="2dp" android:layout_weight="0.6" android:layout_marginBottom="18dp" android:background="@drawable/bg_step_line_inactive" />
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                <FrameLayout android:id="@+id/stepCircle3" android:layout_width="42dp" android:layout_height="42dp" android:background="@drawable/bg_step_inactive">
+                    <ImageView android:id="@+id/stepIcon3" android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="center" android:src="@drawable/ic_person" app:tint="#D1D5DB" />
+                </FrameLayout>
+                <TextView android:id="@+id/stepLabel3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Account" android:textColor="#D1D5DB" android:textSize="10sp" android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/successCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:visibility="gone" app:cardBackgroundColor="#ECFDF5" app:cardCornerRadius="14dp" app:cardElevation="0dp" app:strokeColor="#A7F3D0" app:strokeWidth="1dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:padding="12dp">
+                <ImageView android:layout_width="16dp" android:layout_height="16dp" android:src="@drawable/ic_check_circle" app:tint="#059669" />
+                <TextView android:id="@+id/tvSuccess" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:layout_weight="1" android:textColor="#065F46" android:textSize="13sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+        <com.google.android.material.card.MaterialCardView android:id="@+id/errorCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:visibility="gone" app:cardBackgroundColor="#FEF2F2" app:cardCornerRadius="14dp" app:cardElevation="0dp" app:strokeColor="#FECACA" app:strokeWidth="1dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:paddingStart="14dp" android:paddingTop="12dp" android:paddingEnd="8dp" android:paddingBottom="12dp">
+                <ImageView android:layout_width="16dp" android:layout_height="16dp" android:src="@drawable/ic_error_circle" app:tint="#DC2626" />
+                <TextView android:id="@+id/tvError" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:layout_weight="1" android:textColor="#991B1B" android:textSize="13sp" />
+                <ImageButton android:id="@+id/btnDismissError" android:layout_width="32dp" android:layout_height="32dp" android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="Dismiss error" android:src="@drawable/ic_close" app:tint="#EF4444" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+        <LinearLayout android:id="@+id/step1Container" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="#EDE9FE" android:padding="6dp" android:text="STEP 1 OF 3" android:textColor="#6D28D9" android:textSize="10sp" android:textStyle="bold" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Enter your email" android:textColor="#111827" android:textSize="26sp" android:textStyle="bold" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:layout_marginBottom="24dp" android:text="We'll send a 6-digit verification code to your Gmail inbox to confirm it's you." android:textColor="#6B7280" android:textSize="14sp" />
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilEmail" style="@style/Widget.AnimalBase.AuthInput" android:layout_width="match_parent" android:layout_height="wrap_content" app:hintEnabled="false" app:startIconCheckable="false" app:startIconDrawable="@drawable/ic_email" app:startIconMinSize="18dp" app:startIconTint="#9CA3AF">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etEmail" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Email Address" android:inputType="textEmailAddress" android:minHeight="56dp" android:paddingStart="8dp" android:paddingTop="16dp" android:paddingBottom="16dp" android:textColor="#111827" android:textColorHint="#9CA3AF" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnSendCode" android:layout_width="match_parent" android:layout_height="56dp" android:layout_marginTop="20dp" android:text="Send Verification Code" app:backgroundTint="#7C3AED" app:cornerRadius="14dp" />
+        </LinearLayout>
+
+        <LinearLayout android:id="@+id/step2Container" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="#EDE9FE" android:padding="6dp" android:text="STEP 2 OF 3" android:textColor="#6D28D9" android:textSize="10sp" android:textStyle="bold" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Verify your code" android:textColor="#111827" android:textSize="26sp" android:textStyle="bold" />
+            <TextView android:id="@+id/tvStep2Subtitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:layout_marginBottom="20dp" android:text="A 6-digit code was sent to your Gmail. Enter it below. It expires in 1 minute." android:textColor="#6B7280" android:textSize="14sp" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:orientation="horizontal">
+                <EditText android:id="@+id/etOtp1" android:layout_width="46dp" android:layout_height="58dp" android:layout_margin="4dp" android:background="@drawable/bg_otp_box" android:gravity="center" android:inputType="number" android:maxLength="1" />
+                <EditText android:id="@+id/etOtp2" android:layout_width="46dp" android:layout_height="58dp" android:layout_margin="4dp" android:background="@drawable/bg_otp_box" android:gravity="center" android:inputType="number" android:maxLength="1" />
+                <EditText android:id="@+id/etOtp3" android:layout_width="46dp" android:layout_height="58dp" android:layout_margin="4dp" android:background="@drawable/bg_otp_box" android:gravity="center" android:inputType="number" android:maxLength="1" />
+                <EditText android:id="@+id/etOtp4" android:layout_width="46dp" android:layout_height="58dp" android:layout_margin="4dp" android:background="@drawable/bg_otp_box" android:gravity="center" android:inputType="number" android:maxLength="1" />
+                <EditText android:id="@+id/etOtp5" android:layout_width="46dp" android:layout_height="58dp" android:layout_margin="4dp" android:background="@drawable/bg_otp_box" android:gravity="center" android:inputType="number" android:maxLength="1" />
+                <EditText android:id="@+id/etOtp6" android:layout_width="46dp" android:layout_height="58dp" android:layout_margin="4dp" android:background="@drawable/bg_otp_box" android:gravity="center" android:inputType="number" android:maxLength="1" />
+            </LinearLayout>
+            <TextView android:id="@+id/tvOtpExpiry" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="center" android:text="Code expires in 60s" android:textColor="#9CA3AF" android:textSize="12sp" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnContinueVerify" android:layout_width="match_parent" android:layout_height="56dp" android:layout_marginTop="20dp" android:text="Verify Email" app:backgroundTint="#7C3AED" app:cornerRadius="14dp" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:gravity="center_vertical" android:orientation="horizontal">
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnBackFromCode" style="@style/Widget.MaterialComponents.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Change email" />
+                <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnResendCode" style="@style/Widget.MaterialComponents.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Resend code" app:icon="@drawable/ic_refresh" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout android:id="@+id/step3Container" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="#EDE9FE" android:padding="6dp" android:text="STEP 3 OF 3" android:textColor="#6D28D9" android:textSize="10sp" android:textStyle="bold" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Create your account" android:textColor="#111827" android:textSize="26sp" android:textStyle="bold" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:layout_marginBottom="24dp" android:text="Almost done. Set your name and a secure password." android:textColor="#6B7280" android:textSize="14sp" />
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilFullName" style="@style/Widget.AnimalBase.AuthInput" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="14dp" app:hintEnabled="false" app:startIconCheckable="false" app:startIconDrawable="@drawable/ic_person" app:startIconMinSize="18dp" app:startIconTint="#9CA3AF">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etFullName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Full Name" android:inputType="textPersonName" android:minHeight="56dp" android:paddingStart="8dp" android:paddingTop="16dp" android:paddingBottom="16dp" android:textColor="#111827" android:textColorHint="#9CA3AF" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilEmailLocked" style="@style/Widget.AnimalBase.AuthInput" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="14dp" app:endIconDrawable="@drawable/ic_shield" app:hintEnabled="false">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etEmailLocked" android:layout_width="match_parent" android:layout_height="wrap_content" android:clickable="false" android:focusable="false" android:hint="Email Address" android:minHeight="56dp" android:paddingTop="16dp" android:paddingBottom="16dp" android:textColor="#6B7280" android:textColorHint="#9CA3AF" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilPhoneRegion"
+                    style="@style/Widget.AnimalBase.AuthInput"
+                    android:layout_width="92dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="10dp"
+                    app:hintEnabled="false">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/acPhoneRegion"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:cursorVisible="false"
+                        android:focusable="false"
+                        android:focusableInTouchMode="false"
+                        android:hint="+63"
+                        android:inputType="none"
+                        android:minHeight="56dp"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:textColor="#111827"
+                        android:textColorHint="#9CA3AF" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilPhone"
+                    style="@style/Widget.AnimalBase.AuthInput"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    app:hintEnabled="false">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPhone"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="09123456789"
+                        android:inputType="number"
+                        android:minHeight="56dp"
+                        android:paddingTop="16dp"
+                        android:paddingBottom="16dp"
+                        android:textColor="#111827"
+                        android:textColorHint="#9CA3AF" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilAddress" style="@style/Widget.AnimalBase.AuthInput" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="14dp" app:hintEnabled="false">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etAddress" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Address" android:inputType="textPostalAddress" android:minHeight="56dp" android:paddingTop="16dp" android:paddingBottom="16dp" android:textColor="#111827" android:textColorHint="#9CA3AF" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilPassword" style="@style/Widget.AnimalBase.AuthInput" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="8dp" app:endIconMode="password_toggle" app:endIconTint="#9CA3AF" app:hintEnabled="false" app:startIconCheckable="false" app:startIconDrawable="@drawable/ic_lock" app:startIconMinSize="18dp" app:startIconTint="#9CA3AF">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etPassword" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Password" android:inputType="textPassword" android:minHeight="56dp" android:paddingStart="8dp" android:paddingTop="16dp" android:paddingBottom="16dp" android:textColor="#111827" android:textColorHint="#9CA3AF" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.progressindicator.LinearProgressIndicator android:id="@+id/passwordStrengthIndicator" android:layout_width="match_parent" android:layout_height="6dp" android:layout_marginBottom="4dp" android:max="100" android:progress="0" app:trackColor="#E5E7EB" />
+            <TextView android:id="@+id/tvPasswordStrength" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="14dp" android:text="Strength: -" />
+            <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilConfirmPassword" style="@style/Widget.AnimalBase.AuthInput" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="24dp" app:endIconMode="password_toggle" app:endIconTint="#9CA3AF" app:hintEnabled="false" app:startIconCheckable="false" app:startIconDrawable="@drawable/ic_lock" app:startIconMinSize="18dp" app:startIconTint="#9CA3AF">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etConfirmPassword" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Confirm Password" android:inputType="textPassword" android:minHeight="56dp" android:paddingStart="8dp" android:paddingTop="16dp" android:paddingBottom="16dp" android:textColor="#111827" android:textColorHint="#9CA3AF" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnRegister" android:layout_width="match_parent" android:layout_height="56dp" android:text="Create Account" app:backgroundTint="#7C3AED" app:cornerRadius="14dp" />
+        </LinearLayout>
+
+        <ProgressBar android:id="@+id/progressBar" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:layout_marginTop="16dp" android:visibility="gone" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="28dp" android:gravity="center" android:orientation="horizontal">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Already have an account? " android:textColor="#6B7280" android:textSize="14sp" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnGoLogin" style="@style/Widget.MaterialComponents.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Sign in" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

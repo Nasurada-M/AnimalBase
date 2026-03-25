@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- POST_NOTIFICATIONS required on Android 13+ for local notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- WorkManager needs this for background polling -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AnimalBase"
+        android:usesCleartextTraffic="true"
+        android:hardwareAccelerated="true">
+
+        <!-- ======================================================
+             APP LAUNCHER ICON: Change @mipmap/ic_launcher above.
+             Place icon PNGs in:
+               res/mipmap-hdpi/ic_launcher.png    72×72
+               res/mipmap-mdpi/ic_launcher.png    48×48
+               res/mipmap-xhdpi/ic_launcher.png   96×96
+               res/mipmap-xxhdpi/ic_launcher.png  144×144
+               res/mipmap-xxxhdpi/ic_launcher.png 192×192
+             ====================================================== -->
+
+        <activity android:name=".ui.auth.SplashActivity" android:exported="false"
+            android:theme="@style/Theme.AnimalBase.Splash" />
+
+        <activity android:name=".ui.auth.LoginActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".ui.auth.RegisterActivity"       android:exported="false"/>
+        <activity android:name=".ui.home.MainActivity"           android:exported="false"/>
+        <activity android:name=".ui.adoption.PetDetailActivity"  android:exported="false"/>
+        <activity android:name=".ui.adoption.AdoptionFormActivity" android:exported="false"/>
+        <activity android:name=".ui.missing.MissingPetDetailActivity" android:exported="false"/>
+        <activity android:name=".ui.report.ReportMissingActivity"  android:exported="false"/>
+        <activity android:name=".ui.report.ReportSightingActivity" android:exported="false"/>
+        <activity android:name=".ui.encyclopedia.AnimalDetailActivity" android:exported="false"/>
+        <activity android:name=".ui.profile.ProfileActivity"    android:exported="false" android:launchMode="singleTop"/>
+        <activity android:name=".ui.profile.CropProfilePhotoActivity" android:exported="false"/>
+        <activity android:name=".ui.profile.EditProfileActivity" android:exported="false"/>
+        <activity android:name=".ui.profile.ChangePasswordActivity" android:exported="false"/>
+        <activity android:name=".ui.profile.MyApplicationsActivity" android:exported="false"/>
+        <activity android:name=".ui.profile.MyReportsActivity"  android:exported="false"/>
+        <activity android:name=".ui.notifications.NotificationsActivity" android:exported="false"/>
+        <activity android:name=".ui.map.MapActivity"            android:exported="false"/>
+
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="@string/google_maps_key"/>
+
+        <!-- WorkManager notification channel metadata -->
+        <meta-data
+            android:name="com.animalbase.NOTIFICATION_CHANNEL_ID"
+            android:value="animalbase_channel"/>
+
+        <!--
+        ══════════════════════════════════════════════════════════
+        NO Firebase / FCM service here.
+        Push notifications delivered via:
+          • WebSocket (real-time when app is foreground/background)
+          • NotificationPollingWorker (WorkManager, every 15 min)
+        Both use only PostgreSQL — zero third-party cost.
+        ══════════════════════════════════════════════════════════
+        -->
+
+    </application>
+</manifest>

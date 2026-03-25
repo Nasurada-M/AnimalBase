@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --purple-light: #f3e8ff;
+  --purple-mid:   #a855f7;
+  --purple-dark:  #7e22ce;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: #faf5ff;
+  color: #1e1b4b;
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3, h4, h5, h6 { font-family: 'Sora', sans-serif; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f3e8ff; }
+::-webkit-scrollbar-thumb { background: #c084fc; border-radius: 99px; }
+
+/* Smooth scroll */
+html { scroll-behavior: smooth; }
+
+/* ── Modal backdrop — always centered, always scrollable ──────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(88, 28, 135, 0.45);
+  backdrop-filter: blur(6px);
+  z-index: 70;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1.25rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ── Modal panel — scrolls internally, never overflows screen ─── */
+.modal-panel {
+  background: white;
+  border-radius: 1.5rem;
+  width: 100%;
+  max-width: 32rem;        /* ~512px, same as max-w-lg */
+  max-height: calc(100vh - 2.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-shadow: 0 25px 60px rgba(88, 28, 135, 0.2);
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+/* Purple gradient hero */
+.hero-gradient {
+  background: linear-gradient(135deg, #7e22ce 0%, #a855f7 40%, #c084fc 70%, #e9d5ff 100%);
+}
+
+/* Card glow on hover */
+.card-hover {
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.card-hover:hover {
+  box-shadow: 0 8px 32px rgba(168, 85, 247, 0.22);
+  transform: translateY(-3px);
+}
+
+/* Input focus ring */
+.input-field {
+  @apply w-full border border-primary-200 rounded-xl px-4 py-3 text-sm font-sans text-gray-800 bg-white outline-none transition-all;
+}
+.input-field:focus {
+  @apply border-primary-500 ring-2 ring-primary-200;
+}
+.input-field::placeholder { color: #c084fc; }
+
+/* Search inputs with inline icons */
+.relative > .lucide-search {
+  pointer-events: none;
+}
+
+.relative > .lucide-search + .input-field {
+  padding-left: 2.75rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .relative > .lucide-search + .input-field {
+    padding-left: 3rem;
+  }
+}
+
+/* Purple btn */
+.btn-primary {
+  @apply bg-primary-600 hover:bg-primary-700 active:scale-95 text-white font-semibold rounded-xl px-5 py-2.5 transition-all text-sm;
+}
+.btn-secondary {
+  @apply bg-primary-100 hover:bg-primary-200 active:scale-95 text-primary-700 font-semibold rounded-xl px-5 py-2.5 transition-all text-sm;
+}
+.btn-outline {
+  @apply border border-primary-400 hover:bg-primary-50 active:scale-95 text-primary-600 font-semibold rounded-xl px-5 py-2.5 transition-all text-sm;
+}
+
+/* Badge */
+.badge-available { @apply bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full; }
+.badge-pending   { @apply bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full; }
+.badge-approved  { @apply bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full; }
+.badge-rejected  { @apply bg-red-100 text-red-600 text-xs font-bold px-2.5 py-1 rounded-full; }
+.badge-missing   { @apply bg-red-100 text-red-600 text-xs font-bold px-2.5 py-1 rounded-full; }

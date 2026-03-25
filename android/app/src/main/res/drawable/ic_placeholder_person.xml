@@ -1,0 +1,10 @@
+<!-- ======================================================
+     PLACEHOLDER IMAGE: Shown when user profile photo is empty
+     To change: replace this file OR update ImageLoader.kt line ~22
+     ====================================================== -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp" android:height="100dp" android:viewportWidth="100" android:viewportHeight="100">
+    <path android:fillColor="#E0E0E0" android:pathData="M0,0h100v100H0z"/>
+    <path android:fillColor="#BDBDBD"
+        android:pathData="M50,15c-9.94,0-18,8.06-18,18s8.06,18 18,18 18,-8.06 18,-18S59.94,15 50,15zM15,85c0,-16 23,-25 35,-25s35,9 35,25L15,85z"/>
+</vector>

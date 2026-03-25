@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="spacing_xs">4dp</dimen>
+    <dimen name="spacing_sm">8dp</dimen>
+    <dimen name="spacing_md">16dp</dimen>
+    <dimen name="spacing_lg">24dp</dimen>
+    <dimen name="spacing_xl">32dp</dimen>
+    <dimen name="spacing_xxl">48dp</dimen>
+
+    <dimen name="card_radius">16dp</dimen>
+    <dimen name="card_elevation">4dp</dimen>
+    <dimen name="button_radius">12dp</dimen>
+    <dimen name="input_radius">12dp</dimen>
+    <dimen name="chip_radius">20dp</dimen>
+
+    <dimen name="nav_bar_height">60dp</dimen>
+    <dimen name="fab_size">56dp</dimen>
+    <dimen name="fab_elevation">8dp</dimen>
+
+    <dimen name="pet_card_height">200dp</dimen>
+    <dimen name="pet_card_width">160dp</dimen>
+    <dimen name="pet_detail_image_height">280dp</dimen>
+    <dimen name="avatar_size">80dp</dimen>
+    <dimen name="avatar_size_sm">40dp</dimen>
+    <dimen name="icon_size">24dp</dimen>
+    <dimen name="icon_size_lg">48dp</dimen>
+
+    <dimen name="text_xs">10sp</dimen>
+    <dimen name="text_sm">12sp</dimen>
+    <dimen name="text_md">14sp</dimen>
+    <dimen name="text_lg">16sp</dimen>
+    <dimen name="text_xl">18sp</dimen>
+    <dimen name="text_xxl">22sp</dimen>
+    <dimen name="text_headline">28sp</dimen>
+</resources>

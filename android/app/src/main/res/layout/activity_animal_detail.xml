@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@color/background">
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar" android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize" android:background="@color/primary"
+        app:navigationIcon="@drawable/ic_back" app:titleTextColor="@color/text_on_primary"/>
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="16dp">
+            <ImageView android:id="@+id/ivAnimalImage"
+                android:layout_width="match_parent" android:layout_height="220dp"
+                android:scaleType="centerCrop" android:src="@drawable/ic_placeholder_pet"/>
+            <TextView android:id="@+id/tvCommonName"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textSize="22sp" android:textStyle="bold" android:textColor="@color/text_primary"
+                android:layout_marginTop="12dp"/>
+            <TextView android:id="@+id/tvScientificName"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textSize="13sp" android:textColor="@color/text_secondary" android:textStyle="italic"/>
+            <TextView android:id="@+id/tvCategory" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/primary" android:layout_marginTop="4dp"/>
+            <TextView android:id="@+id/tvConservationStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/text_secondary"/>
+            <TextView android:id="@+id/tvHabitat" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/text_secondary"/>
+            <TextView android:id="@+id/tvDiet" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/text_secondary"/>
+            <TextView android:id="@+id/tvLifespan" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/text_secondary"/>
+            <TextView android:id="@+id/tvSizeWeight" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/text_secondary"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Description" android:textSize="15sp" android:textStyle="bold"
+                android:textColor="@color/text_primary" android:layout_marginTop="12dp"/>
+            <TextView android:id="@+id/tvDescription" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textSize="13sp" android:textColor="@color/text_secondary" android:lineSpacingMultiplier="1.4"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Interesting Facts" android:textSize="15sp" android:textStyle="bold"
+                android:textColor="@color/text_primary" android:layout_marginTop="12dp"/>
+            <TextView android:id="@+id/tvFacts" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textSize="13sp" android:textColor="@color/text_secondary" android:lineSpacingMultiplier="1.4"/>
+        </LinearLayout>
+    </ScrollView>
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabFavorite"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end" android:layout_margin="16dp"
+        android:src="@android:drawable/star_off"
+        app:backgroundTint="@color/secondary"/>
+</LinearLayout>
