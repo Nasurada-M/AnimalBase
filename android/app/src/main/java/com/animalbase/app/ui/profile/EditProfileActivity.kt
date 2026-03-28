@@ -19,12 +19,15 @@ class EditProfileActivity : SessionAwareActivity() {
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        RegionalPhoneUtils.bindLocalPhoneInput(binding.etPhone)
+        binding.etAddress.filters = arrayOf(petTextInputFilter(multiline = true, allowComma = true))
+        bindPangasinanLocationAutocomplete(binding.etAddress, binding.tilAddress, lifecycleScope, api)
 
         val user = session.getUser()
         user?.let {
             binding.etFullName.setText(it.fullName)
             binding.etEmail.setText(it.email)
-            binding.etPhone.setText(it.phoneNumber.orEmpty())
+            binding.etPhone.setText(RegionalPhoneUtils.sanitizeLocalNumber(it.phone.orEmpty()))
             binding.etAddress.setText(it.address.orEmpty())
             binding.tvProfilePreviewName.text = it.fullName.ifBlank { "AnimalBase User" }
             binding.tvProfilePreviewEmail.text = it.email.ifBlank { "No email available" }
@@ -36,14 +39,22 @@ class EditProfileActivity : SessionAwareActivity() {
 
     private fun saveProfile() {
         val fullName = binding.etFullName.text.toString().trim()
-        val phone = binding.etPhone.text.toString().trim()
+        val phone = RegionalPhoneUtils.sanitizeLocalNumber(binding.etPhone.text.toString())
         val address = binding.etAddress.text.toString().trim()
+
+        binding.tilFullName.error = null
+        binding.tilPhone.error = null
+        binding.tilAddress.error = null
 
         if (!ValidationUtils.isValidName(fullName)) {
             binding.tilFullName.error = "Name is required"; return
         }
-        if (phone.isNotEmpty() && !ValidationUtils.isValidPhoneNumber(phone)) {
-            binding.tilPhone.error = "Valid phone number required"; return
+        if (phone.isNotEmpty() && !RegionalPhoneUtils.isValidLocalNumber(phone)) {
+            binding.tilPhone.error = RegionalPhoneUtils.validationMessage(); return
+        }
+        if (address.isNotEmpty() && !isPangasinanLocation(address)) {
+            binding.tilAddress.error = pangasinanLocationValidationMessage("Address")
+            return
         }
 
         binding.progressBar.visible()

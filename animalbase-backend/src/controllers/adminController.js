@@ -4,6 +4,12 @@ const { formatPet }  = require('./petController');
 const { formatApp }  = require('./applicationController');
 const { sendNewPetAvailabilityEmails } = require('./authController');
 const { deleteUserAccountById } = require('../utils/accountDeletion');
+const {
+  buildUploadedFilePath,
+  normalizeStoredAssetUrl,
+  resolveStoredAssetUrl,
+} = require('../middleware/upload');
+const { isPangasinanLocation } = require('../utils/location');
 
 const ADOPTED_PET_LOCK_MESSAGE = 'This pet has already been adopted by its new owners.';
 
@@ -75,7 +81,7 @@ const getAllUsers = async (req, res) => {
     const result = await pool.query(query, params);
     res.json(result.rows.map(u => ({
       id: u.id, fullName: u.full_name, email: u.email,
-      phone: u.phone, address: u.address, avatarUrl: u.avatar_url,
+      phone: u.phone, address: u.address, avatarUrl: resolveStoredAssetUrl(req, u.avatar_url),
       role: u.role, joinedAt: u.joined_at,
     })));
   } catch (err) {
@@ -97,7 +103,7 @@ const getUserById = async (req, res) => {
       email: u.email,
       phone: u.phone,
       address: u.address,
-      avatarUrl: u.avatar_url,
+      avatarUrl: resolveStoredAssetUrl(req, u.avatar_url),
       role: u.role,
       joinedAt: u.joined_at,
     });
@@ -109,11 +115,14 @@ const getUserById = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { fullName, email, phone, address, role, avatarUrl } = req.body;
+    if (address && !isPangasinanLocation(address)) {
+      return res.status(400).json({ error: 'Address must be in Pangasinan, Philippines.' });
+    }
     const result = await pool.query(
       `UPDATE users SET full_name=$1, email=$2, phone=$3, address=$4, role=$5, avatar_url=$6
        WHERE id=$7
        RETURNING id, full_name, email, phone, address, avatar_url, role, joined_at`,
-      [fullName, email, phone, address, role, avatarUrl ?? null, req.params.id]
+      [fullName, email, phone, address, role, normalizeStoredAssetUrl(avatarUrl) ?? null, req.params.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'User not found.' });
     const u = result.rows[0];
@@ -123,7 +132,7 @@ const updateUser = async (req, res) => {
       email: u.email,
       phone: u.phone,
       address: u.address,
-      avatarUrl: u.avatar_url,
+      avatarUrl: resolveStoredAssetUrl(req, u.avatar_url),
       role: u.role,
       joinedAt: u.joined_at,
     });
@@ -169,7 +178,7 @@ const adminGetAllPets = async (req, res) => {
     if (search) { params.push(`%${search}%`); query += ` AND (name ILIKE $${params.length} OR breed ILIKE $${params.length})`; }
     query += ' ORDER BY created_at DESC';
     const result = await pool.query(query, params);
-    res.json(result.rows.map(formatPet));
+    res.json(result.rows.map((row) => formatPet(row, req)));
   } catch (err) {
     res.status(500).json({ error: 'Server error.' });
   }
@@ -177,21 +186,29 @@ const adminGetAllPets = async (req, res) => {
 
 const createPet = async (req, res) => {
   try {
+    if (req.fileValidationError) {
+      return res.status(400).json({ error: req.fileValidationError });
+    }
+
     const { name, type, breed, gender, age, weight, colorAppearance, description,
             distinctiveFeatures, imageUrl, status, shelterName, shelterEmail,
             shelterPhone, location } = req.body;
+    const petImageUrl = buildUploadedFilePath(req.file) || normalizeStoredAssetUrl(imageUrl) || null;
     if (!name || !type || !breed || !gender || !age || !weight || !colorAppearance || !description) {
       return res.status(400).json({ error: 'Required fields are missing.' });
+    }
+    if (location && !isPangasinanLocation(location)) {
+      return res.status(400).json({ error: 'Shelter location must be in Pangasinan, Philippines.' });
     }
     const result = await pool.query(
       `INSERT INTO pets (name, type, breed, gender, age, weight, color_appearance, description,
          distinctive_features, image_url, status, shelter_name, shelter_email, shelter_phone, location, created_by)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
       [name, type, breed, gender, age, weight, colorAppearance, description,
-       distinctiveFeatures, imageUrl, status || 'Available',
+       distinctiveFeatures, petImageUrl, status || 'Available',
        shelterName, shelterEmail, shelterPhone, location, req.user.id]
     );
-    const createdPet = formatPet(result.rows[0]);
+    const createdPet = formatPet(result.rows[0], req);
 
     if (createdPet.status === 'Available') {
       queueNewPetAvailabilityEmails(createdPet);
@@ -206,9 +223,14 @@ const createPet = async (req, res) => {
 
 const updatePet = async (req, res) => {
   try {
+    if (req.fileValidationError) {
+      return res.status(400).json({ error: req.fileValidationError });
+    }
+
     const { name, type, breed, gender, age, weight, colorAppearance, description,
             distinctiveFeatures, imageUrl, status, shelterName, shelterEmail,
             shelterPhone, location } = req.body;
+    const petImageUrl = buildUploadedFilePath(req.file) || normalizeStoredAssetUrl(imageUrl) || null;
     const existingPet = await pool.query(
       'SELECT id, status FROM pets WHERE id=$1',
       [req.params.id]
@@ -217,6 +239,9 @@ const updatePet = async (req, res) => {
     if (existingPet.rows[0].status === 'Adopted') {
       return res.status(409).json({ error: ADOPTED_PET_LOCK_MESSAGE });
     }
+    if (location && !isPangasinanLocation(location)) {
+      return res.status(400).json({ error: 'Shelter location must be in Pangasinan, Philippines.' });
+    }
 
     const result = await pool.query(
       `UPDATE pets SET name=$1, type=$2, breed=$3, gender=$4, age=$5, weight=$6,
@@ -224,10 +249,10 @@ const updatePet = async (req, res) => {
          status=$11, shelter_name=$12, shelter_email=$13, shelter_phone=$14, location=$15
        WHERE id=$16 RETURNING *`,
       [name, type, breed, gender, age, weight, colorAppearance, description,
-       distinctiveFeatures, imageUrl, status, shelterName, shelterEmail, shelterPhone, location,
+       distinctiveFeatures, petImageUrl, status, shelterName, shelterEmail, shelterPhone, location,
        req.params.id]
     );
-    const updatedPet = formatPet(result.rows[0]);
+    const updatedPet = formatPet(result.rows[0], req);
 
     if (existingPet.rows[0].status !== 'Available' && updatedPet.status === 'Available') {
       queueNewPetAvailabilityEmails(updatedPet);
@@ -261,7 +286,7 @@ const adminGetAllApplications = async (req, res) => {
     if (search) { params.push(`%${search}%`); query += ` AND (aa.full_name ILIKE $${params.length} OR p.name ILIKE $${params.length})`; }
     query += ' ORDER BY aa.submitted_at DESC';
     const result = await pool.query(query, params);
-    res.json(result.rows.map(formatApp));
+    res.json(result.rows.map((row) => formatApp(row, req)));
   } catch (err) {
     res.status(500).json({ error: 'Server error.' });
   }
@@ -303,7 +328,7 @@ const updateApplicationStatus = async (req, res) => {
       );
     }
 
-    res.json(formatApp(result.rows[0]));
+    res.json(formatApp(result.rows[0], req));
   } catch (err) {
     console.error('updateApplicationStatus error:', err);
     res.status(500).json({ error: 'Server error.' });
@@ -354,7 +379,7 @@ const adminGetAllLostPets = async (req, res) => {
       gender:           row.gender,
       colorAppearance:  row.color_appearance,
       description:      row.description,
-      imageUrl:         row.image_url,
+      imageUrl:         resolveStoredAssetUrl(req, row.image_url),
       lastSeenLocation: row.last_seen_location,
       lastSeenDate:     row.last_seen_date,
       rewardOffered:    row.reward_offered,
@@ -417,7 +442,7 @@ const adminGetAllSightings = async (req, res) => {
       petName:       row.pet_name,
       petType:       row.pet_type,
       petBreed:      row.pet_breed,
-      petImageUrl:   row.pet_image_url,
+      petImageUrl:   resolveStoredAssetUrl(req, row.pet_image_url),
       petStatus:     row.pet_status,
       reporterName:  row.reporter_name,
       reporterEmail: row.reporter_email,

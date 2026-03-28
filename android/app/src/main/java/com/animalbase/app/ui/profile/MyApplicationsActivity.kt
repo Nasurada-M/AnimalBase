@@ -1,15 +1,13 @@
 package com.animalbase.app.ui.profile
 
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.ViewGroup
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.animalbase.app.api.RetrofitClient
 import com.animalbase.app.databinding.ActivityMyApplicationsBinding
-import com.animalbase.app.databinding.ItemApplicationBinding
 import com.animalbase.app.models.AdoptionApplication
+import com.animalbase.app.ui.applications.ApplicationCardAdapter
+import com.animalbase.app.ui.applications.ApplicationDetailsDialog
 import com.animalbase.app.ui.base.SessionAwareActivity
 import com.animalbase.app.utils.*
 import kotlinx.coroutines.launch
@@ -17,6 +15,7 @@ import kotlinx.coroutines.launch
 class MyApplicationsActivity : SessionAwareActivity() {
     private lateinit var binding: ActivityMyApplicationsBinding
     private val api by lazy { RetrofitClient.getApiService(this) }
+    private val applicationAdapter by lazy { ApplicationCardAdapter(::showApplicationDetails) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,6 +24,7 @@ class MyApplicationsActivity : SessionAwareActivity() {
         setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener { onBackPressed() }
         binding.rvApplications.layoutManager = LinearLayoutManager(this)
+        binding.rvApplications.adapter = applicationAdapter
         loadApplications()
     }
 
@@ -36,7 +36,7 @@ class MyApplicationsActivity : SessionAwareActivity() {
                 binding.progressBar.gone()
                 if (response.isSuccessful) {
                     val apps = response.body() ?: emptyList()
-                    binding.rvApplications.adapter = ApplicationAdapter(apps)
+                    applicationAdapter.submitList(apps)
                     binding.tvEmpty.visibility = if (apps.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
                 }
             } catch (e: Exception) {
@@ -46,24 +46,7 @@ class MyApplicationsActivity : SessionAwareActivity() {
         }
     }
 
-    inner class ApplicationAdapter(private val apps: List<AdoptionApplication>) :
-        RecyclerView.Adapter<ApplicationAdapter.VH>() {
-        inner class VH(val b: ItemApplicationBinding) : RecyclerView.ViewHolder(b.root)
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-            VH(ItemApplicationBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-        override fun getItemCount() = apps.size
-        override fun onBindViewHolder(holder: VH, position: Int) {
-            val app = apps[position]
-            holder.b.tvPetName.text = app.petName ?: "Pet #${app.petId}"
-            holder.b.tvShelterName.text = app.shelterName ?: ""
-            holder.b.tvStatus.text = app.status
-            holder.b.tvDate.text = app.createdAt?.formatDateTime() ?: ""
-            val statusColor = when (app.status) {
-                "Approved" -> getColor(com.animalbase.app.R.color.status_available)
-                "Rejected" -> getColor(com.animalbase.app.R.color.status_rejected)
-                else -> getColor(com.animalbase.app.R.color.status_pending)
-            }
-            holder.b.tvStatus.setTextColor(statusColor)
-        }
+    private fun showApplicationDetails(application: AdoptionApplication) {
+        ApplicationDetailsDialog.show(this, application)
     }
 }

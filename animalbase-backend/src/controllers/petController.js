@@ -1,6 +1,10 @@
 const pool = require('../db/pool');
+const { resolveStoredAssetUrl } = require('../middleware/upload');
 
-const formatPet = (row) => ({
+const isRequestLike = (request) =>
+  Boolean(request && typeof request === 'object' && typeof request.get === 'function');
+
+const formatPet = (row, req = null) => ({
   id:                  row.id,
   name:                row.name,
   type:                row.type,
@@ -11,7 +15,7 @@ const formatPet = (row) => ({
   colorAppearance:     row.color_appearance,
   description:         row.description,
   distinctiveFeatures: row.distinctive_features,
-  imageUrl:            row.image_url,
+  imageUrl:            resolveStoredAssetUrl(isRequestLike(req) ? req : null, row.image_url),
   status:              row.status,
   shelterName:         row.shelter_name,
   shelterEmail:        row.shelter_email,
@@ -44,7 +48,7 @@ const getAllPets = async (req, res) => {
     query += ' ORDER BY created_at DESC';
 
     const result = await pool.query(query, params);
-    res.json(result.rows.map(formatPet));
+    res.json(result.rows.map((row) => formatPet(row, req)));
   } catch (err) {
     console.error('getAllPets error:', err);
     res.status(500).json({ error: 'Server error.' });
@@ -56,7 +60,7 @@ const getPetById = async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM pets WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Pet not found.' });
-    res.json(formatPet(result.rows[0]));
+    res.json(formatPet(result.rows[0], req));
   } catch (err) {
     res.status(500).json({ error: 'Server error.' });
   }

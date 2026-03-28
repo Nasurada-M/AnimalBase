@@ -2,8 +2,15 @@ package com.animalbase.app.utils
 
 import android.app.DatePickerDialog
 import android.content.Context
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
+import com.animalbase.app.R
 import com.google.android.material.snackbar.Snackbar
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -23,12 +30,63 @@ fun View.visible() { visibility = View.VISIBLE }
 fun View.gone() { visibility = View.GONE }
 fun View.invisible() { visibility = View.INVISIBLE }
 
-fun Context.showDatePicker(onDateSelected: (String) -> Unit) {
+fun Context.showDatePicker(initialValue: String? = null, onDateSelected: (String) -> Unit) {
     val cal = Calendar.getInstance()
-    DatePickerDialog(this, { _, y, m, d ->
+
+    if (ValidationUtils.isValidDate(initialValue.orEmpty())) {
+        runCatching {
+            val parts = initialValue.orEmpty().split("-")
+            cal.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())
+        }
+    }
+
+    val dialog = DatePickerDialog(this, { _, y, m, d ->
         val formatted = String.format("%04d-%02d-%02d", y, m + 1, d)
         onDateSelected(formatted)
-    }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show()
+    }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH))
+
+    dialog.setButton(DatePickerDialog.BUTTON_NEUTRAL, getString(R.string.today)) { _, _ ->
+        val today = Calendar.getInstance()
+        val formatted = String.format(
+            "%04d-%02d-%02d",
+            today.get(Calendar.YEAR),
+            today.get(Calendar.MONTH) + 1,
+            today.get(Calendar.DAY_OF_MONTH)
+        )
+        onDateSelected(formatted)
+    }
+
+    dialog.show()
+}
+
+fun View.tintRequiredAsterisks() {
+    tintRequiredAsterisksRecursive(this, ContextCompat.getColor(context, R.color.error))
+}
+
+private fun tintRequiredAsterisksRecursive(view: View, color: Int) {
+    if (view is TextView) {
+        val originalText = view.text?.toString().orEmpty()
+        if (originalText.contains('*')) {
+            val spannable = SpannableString(originalText)
+            originalText.forEachIndexed { index, character ->
+                if (character == '*') {
+                    spannable.setSpan(
+                        ForegroundColorSpan(color),
+                        index,
+                        index + 1,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+            }
+            view.text = spannable
+        }
+    }
+
+    if (view is ViewGroup) {
+        for (index in 0 until view.childCount) {
+            tintRequiredAsterisksRecursive(view.getChildAt(index), color)
+        }
+    }
 }
 
 fun String.formatDisplayDate(): String {

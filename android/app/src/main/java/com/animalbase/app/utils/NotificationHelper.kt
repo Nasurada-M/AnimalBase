@@ -57,14 +57,12 @@ object NotificationHelper {
         title: String,
         message: String,
         notificationKey: String? = null,
-        openTab: String? = null,
+        route: String? = null,
     ) {
-        val intent = if (openTab.isNullOrBlank()) {
+        val intent = if (route.isNullOrBlank()) {
             Intent(context, NotificationsActivity::class.java)
         } else {
-            Intent(context, com.animalbase.app.ui.home.MainActivity::class.java)
-                .putExtra(NotificationNavigator.EXTRA_OPEN_TAB, openTab)
-                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            NotificationNavigator.intentForRoute(context, route)
         }.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
         val requestCode = notificationKey?.hashCode() ?: System.currentTimeMillis().toInt()

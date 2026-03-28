@@ -21,7 +21,7 @@ export default function AdminLayout() {
   const [open, setOpen] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
 
-  const handleLogout = () => { logout(); navigate('/'); };
+  const handleLogout = () => { logout(); navigate('/login'); };
   const current = NAV.find(n => location.pathname.startsWith(n.path));
 
   return (

@@ -56,7 +56,10 @@ class NotificationPollingWorker(
                 )
 
                 notifications
-                    .filter { !it.isRead && store.shouldShowSystemNotification(user.effectiveUserId, it.id) }
+                    .filter {
+                        !it.isRead &&
+                            store.shouldShowSystemNotification(user.effectiveUserId, it.id, it.kind)
+                    }
                     .take(3)   // avoid spamming the tray
                     .forEach { n ->
                         NotificationHelper.show(
@@ -64,7 +67,7 @@ class NotificationPollingWorker(
                             n.title,
                             n.message,
                             n.id,
-                            NotificationNavigator.tabForRoute(n.route)
+                            n.route
                         )
                         store.markAsDelivered(user.effectiveUserId, n.id)
                     }

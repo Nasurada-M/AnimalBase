@@ -6,7 +6,9 @@ import {
   ArrowUpRight, Mail, Phone,
 } from 'lucide-react';
 import ModalPortal from '../../components/ModalPortal';
+import ImageLightbox from '../../components/ImageLightbox';
 import ClearableSearchField from '../../components/ClearableSearchField';
+import PangasinanLocationInput from '../../components/PangasinanLocationInput';
 import { usePetFinderViewModel } from '../../viewmodels/PetFinderViewModel';
 import { ApiLostPet, ApiSighting } from '../../services/api';
 import { MissingPetPayload, SightingPayload } from '../../services/api';
@@ -14,6 +16,10 @@ import { useAuth } from '../../context/AppContext';
 import { sanitizePetAddressInput, sanitizePetTextInput } from '../../utils/petTextSanitizers';
 import { formatWeightForDisplay, getWeightInputValue } from '../../utils/petWeight';
 import { formatPhpAmount, formatPhpRewardValue, sanitizePhpAmountInput } from '../../utils/phpCurrency';
+import {
+  getPangasinanLocationValidationMessage,
+  isPangasinanLocationValue,
+} from '../../utils/pangasinanLocation';
 
 const MISSING_PET_TYPES = ['Dog', 'Cat', 'Bird', 'Small Animal', 'Reptile', 'Other'];
 const AGE_OPTIONS = ['Under 1 year', '1-2 years', '3-5 years', '6-10 years', '10+ years', 'Unknown'];
@@ -118,6 +124,31 @@ function isUserLostPetOwner(
     pet.ownerEmail &&
     pet.ownerEmail.trim().toLowerCase() === normalizedUserEmail
   );
+}
+
+function sortLostPetsForDisplay(
+  pets: ApiLostPet[],
+  userId?: number,
+  normalizedUserEmail?: string
+) {
+  return [...pets].sort((a, b) => {
+    const ownerPriority =
+      Number(isUserLostPetOwner(b, userId, normalizedUserEmail))
+      - Number(isUserLostPetOwner(a, userId, normalizedUserEmail));
+
+    if (ownerPriority !== 0) {
+      return ownerPriority;
+    }
+
+    const reportedAtDifference =
+      new Date(b.reportedAt ?? 0).getTime() - new Date(a.reportedAt ?? 0).getTime();
+
+    if (reportedAtDifference !== 0) {
+      return reportedAtDifference;
+    }
+
+    return a.petName.localeCompare(b.petName);
+  });
 }
 
 function formatFinderDate(value?: string) {
@@ -280,6 +311,8 @@ function ImageUploader({
 
 const LOST_PET_IMAGE_CLASS = 'w-full h-80 object-cover';
 const LOST_PET_IMAGE_FALLBACK_CLASS = 'w-full h-80 bg-primary-50 flex items-center justify-center';
+const LOST_PET_DETAIL_IMAGE_CLASS = 'block w-full h-auto object-contain';
+const LOST_PET_DETAIL_IMAGE_FALLBACK_CLASS = 'w-full min-h-[20rem] bg-primary-50 flex items-center justify-center';
 
 function LostPetCard({
   pet, onView, onSighting, isOwner,
@@ -345,7 +378,7 @@ function LostPetDetail({
     return new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime();
   })[0] ?? null;
 
-  const displayLocation = latestSighting?.address || latestSighting?.locationSeen || pet.lastSeenLocation;
+  const displayLocation = latestSighting?.locationSeen || latestSighting?.address || pet.lastSeenLocation;
   const mapUrl = buildGoogleMapsUrl(
     latestSighting?.latitude,
     latestSighting?.longitude,
@@ -361,6 +394,7 @@ function LostPetDetail({
   const shouldShowReporterContact = !isOwner && Boolean(reporterEmail || reporterPhone);
 
   const [showFoundConfirm, setShowFoundConfirm] = useState(false);
+  const [showImageLightbox, setShowImageLightbox] = useState(false);
 
   return (
     <div className="animate-slide-up">
@@ -369,10 +403,23 @@ function LostPetDetail({
       </button>
       <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-primary-50">
         <div className="px-6 pt-6">
-          <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-3xl">
+          <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-3xl bg-primary-50">
             {pet.imageUrl
-              ? <img src={pet.imageUrl} alt={pet.petName} className={LOST_PET_IMAGE_CLASS} />
-              : <div className={LOST_PET_IMAGE_FALLBACK_CLASS}>
+              ? (
+                <button
+                  type="button"
+                  onClick={() => setShowImageLightbox(true)}
+                  className="block w-full cursor-zoom-in text-left"
+                  aria-label={`View full photo of ${pet.petName}`}
+                >
+                  <img
+                    src={pet.imageUrl}
+                    alt={pet.petName}
+                    className={LOST_PET_DETAIL_IMAGE_CLASS}
+                  />
+                </button>
+              )
+              : <div className={LOST_PET_DETAIL_IMAGE_FALLBACK_CLASS}>
                   <Camera className="w-14 h-14 text-primary-200" />
                 </div>
             }
@@ -534,6 +581,12 @@ function LostPetDetail({
         </div>
         </ModalPortal>
       )}
+      <ImageLightbox
+        imageUrl={pet.imageUrl || ''}
+        alt={pet.petName}
+        isOpen={showImageLightbox && Boolean(pet.imageUrl)}
+        onClose={() => setShowImageLightbox(false)}
+      />
     </div>
   );
 }
@@ -562,6 +615,7 @@ function ReportMissingForm({
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   useEffect(() => {
     setForm((current) => ({
@@ -601,6 +655,11 @@ function ReportMissingForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isPangasinanLocationValue(form.lastSeenLocation)) {
+      setLocationError(getPangasinanLocationValidationMessage('Last seen location'));
+      return;
+    }
+    setLocationError(null);
     const { rewardAmount, ...payload } = form;
 
     await onSubmit({
@@ -622,6 +681,12 @@ function ReportMissingForm({
         {submitError && (
           <div className="mb-5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 flex items-start gap-2">
             <X className="w-4 h-4 mt-0.5 flex-shrink-0" /> {submitError}
+          </div>
+        )}
+
+        {locationError && (
+          <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" /> {locationError}
           </div>
         )}
 
@@ -706,7 +771,17 @@ function ReportMissingForm({
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <Field label="Location" required>
-                  <input className="input-field" placeholder="Street, landmark, city" value={form.lastSeenLocation} onChange={set('lastSeenLocation')} required maxLength={300} />
+                  <PangasinanLocationInput
+                    value={form.lastSeenLocation}
+                    onChange={(value) => {
+                      setLocationError(null);
+                      setForm(f => ({ ...f, lastSeenLocation: value }));
+                    }}
+                    placeholder="Search Pangasinan barangay, city, or municipality"
+                    required
+                    maxLength={300}
+                    helperText="Choose where the pet was last seen in Pangasinan."
+                  />
                 </Field>
               </div>
               <div className="col-span-2">
@@ -784,12 +859,15 @@ function ReportSightingForm({
   isSubmitting: boolean;
   submitError: string | null;
 }) {
-  const [selectedId, setSelectedId] = useState<number | ''>(pet?.id ?? '');
   const { user } = useAuth();
+  const normalizedUserEmail = user?.email?.trim().toLowerCase() || '';
+  const lockedPet = pet && !isUserLostPetOwner(pet, user?.id, normalizedUserEmail) ? pet : null;
+  const [selectedId, setSelectedId] = useState<number | ''>(lockedPet?.id ?? '');
   const [form, setForm] = useState({
     reporterName: user?.fullName || '', reporterEmail: user?.email ||  '', 
     reporterPhone: user?.phone || '', locationSeen: '', dateSeen: '', description: '',
   });
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [locationNotice, setLocationNotice] = useState<{
     tone: 'info' | 'warning';
     message: string;
@@ -803,6 +881,13 @@ function ReportSightingForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedId) return;
+    if (!isPangasinanLocationValue(form.locationSeen)) {
+      setLocationNotice({
+        tone: 'warning',
+        message: getPangasinanLocationValidationMessage('Sighting location'),
+      });
+      return;
+    }
 
     setIsLocating(true);
     const locationResult = await requestBrowserLocation();
@@ -815,6 +900,7 @@ function ReportSightingForm({
     await onSubmit(
       {
         ...form,
+        imageUrl: imagePreview || undefined,
         latitude: locationResult.latitude,
         longitude: locationResult.longitude,
       },
@@ -822,7 +908,14 @@ function ReportSightingForm({
     );
   };
 
-  const missingPets = lostPets.filter(p => p.status === 'Missing');
+  const missingPets = sortLostPetsForDisplay(
+    lostPets.filter((candidate) => (
+      candidate.status === 'Missing'
+      && !isUserLostPetOwner(candidate, user?.id, normalizedUserEmail)
+    )),
+    user?.id,
+    normalizedUserEmail
+  );
 
   return (
     <div className="animate-slide-up">
@@ -832,7 +925,7 @@ function ReportSightingForm({
       <div className="bg-white rounded-3xl p-6 shadow-sm border border-primary-50">
         <h2 className="font-display font-bold text-xl text-gray-900 mb-1">Report Sighting</h2>
         <p className="text-gray-400 text-sm mb-6">
-          {pet ? <>Reporting sighting for <strong>{pet.petName}</strong></> : 'Tell us which pet you spotted and where.'}
+          {lockedPet ? <>Reporting sighting for <strong>{lockedPet.petName}</strong></> : 'Tell us which pet you spotted and where.'}
         </p>
 
         {submitError && (
@@ -841,9 +934,11 @@ function ReportSightingForm({
           </div>
         )}
 
-        <div className="mb-5 rounded-2xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm text-primary-700">
-          We will ask for your current location when you submit so the sighting can be pinned on the map when available.
-        </div>
+        {pet && !lockedPet && (
+          <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            You can&apos;t submit a sighting report for your own missing pet report. Please choose another missing pet below.
+          </div>
+        )}
 
         {locationNotice && (
           <div className={`mb-5 rounded-2xl px-4 py-3 text-sm ${
@@ -861,7 +956,7 @@ function ReportSightingForm({
               <Eye className="w-4 h-4" /> Pet Details
             </p>
 
-            {!pet && (
+            {!lockedPet && (
               <Field label="Which pet did you spot?" required>
                 <select
                   className="input-field"
@@ -876,22 +971,27 @@ function ReportSightingForm({
                     </option>
                   ))}
                 </select>
+                {missingPets.length === 0 && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    No other missing pet reports are currently available for sighting reports.
+                  </p>
+                )}
               </Field>
             )}
 
-            {pet && (
+            {lockedPet && (
               <div className="flex items-center gap-3 bg-primary-50 rounded-2xl p-4">
-                {pet.imageUrl ? (
-                  <img src={pet.imageUrl} alt={pet.petName} className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
+                {lockedPet.imageUrl ? (
+                  <img src={lockedPet.imageUrl} alt={lockedPet.petName} className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
                 ) : (
                   <div className="w-14 h-14 rounded-xl bg-primary-100 flex items-center justify-center text-sm font-bold text-primary-600 flex-shrink-0">PET</div>
                 )}
                 <div>
-                  <p className="font-bold text-gray-800 text-sm">{pet.petName}</p>
-                  <p className="text-xs text-gray-400">{pet.breed} - {pet.type}</p>
+                  <p className="font-bold text-gray-800 text-sm">{lockedPet.petName}</p>
+                  <p className="text-xs text-gray-400">{lockedPet.breed} - {lockedPet.type}</p>
                   <div className="flex items-center gap-1 text-xs text-gray-400 mt-1">
                     <MapPin className="w-3 h-3" />
-                    <span className="truncate">{pet.lastSeenLocation}</span>
+                    <span className="truncate">{lockedPet.lastSeenLocation}</span>
                   </div>
                 </div>
               </div>
@@ -920,7 +1020,14 @@ function ReportSightingForm({
               <ClipboardList className="w-4 h-4" /> Sighting Details
             </p>
             <Field label="Where did you see it?" required>
-              <input className="input-field" placeholder="Street, landmark, city..." value={form.locationSeen} onChange={set('locationSeen')} required maxLength={300} />
+              <PangasinanLocationInput
+                value={form.locationSeen}
+                onChange={(value) => setForm(f => ({ ...f, locationSeen: value }))}
+                placeholder="Search Pangasinan barangay, city, or municipality"
+                required
+                maxLength={300}
+                helperText="Choose the barangay, city, or municipality in Pangasinan where you saw the pet."
+              />
             </Field>
             <Field label="Date Seen" required>
               <input type="date" className="input-field" value={form.dateSeen} onChange={set('dateSeen')} required />
@@ -928,11 +1035,17 @@ function ReportSightingForm({
             <Field label="Description" required>
               <textarea className="input-field resize-none" rows={4} placeholder="Describe what you saw, the pet's condition, behavior..." value={form.description} onChange={set('description')} required maxLength={1000}/>
             </Field>
+            <ImageUploader
+              label="Upload a photo for the owner (optional)"
+              preview={imagePreview}
+              onChange={(base64, _file) => setImagePreview(base64)}
+              onClear={() => setImagePreview(null)}
+            />
           </div>
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onBack} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" disabled={isLocating || isSubmitting || (!pet && !selectedId)} className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50">
+            <button type="submit" disabled={isLocating || isSubmitting || (!lockedPet && !selectedId)} className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50">
               {isLocating ? <><Loader2 className="w-4 h-4 animate-spin" /> Capturing Location...</> : isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</> : 'Submit Sighting'}
             </button>
           </div>
@@ -987,11 +1100,19 @@ export default function PetFinderPage() {
   const handledNavigationAction = useRef<string | null>(null);
 
   const normalizedUserEmail = user?.email?.trim().toLowerCase() || '';
-  const recentReports = lostPets.filter((pet) => pet.status === 'Missing');
-  const yourReports = lostPets.filter((pet) => (
-    pet.status === 'Missing' &&
-    isUserLostPetOwner(pet, user?.id, normalizedUserEmail)
-  ));
+  const recentReports = sortLostPetsForDisplay(
+    lostPets.filter((pet) => pet.status === 'Missing'),
+    user?.id,
+    normalizedUserEmail
+  );
+  const yourReports = sortLostPetsForDisplay(
+    lostPets.filter((pet) => (
+      pet.status === 'Missing' &&
+      isUserLostPetOwner(pet, user?.id, normalizedUserEmail)
+    )),
+    user?.id,
+    normalizedUserEmail
+  );
 
   const sourcePets = listMode === 'your-reports' ? yourReports : recentReports;
   const normalizedSearch = searchQuery.trim().toLowerCase();
@@ -1002,9 +1123,19 @@ export default function PetFinderPage() {
       || pet.type.toLowerCase().includes(normalizedSearch)
   ));
   const isShowingYourReports = listMode === 'your-reports';
-  const navigationAction = (location.state as {
+  const stateNavigationAction = (location.state as {
     petFinderAction?: { petId: number; type: 'view' | 'sighting' };
   } | null)?.petFinderAction;
+  const notificationPetId = (() => {
+    const petIdParam = new URLSearchParams(location.search).get('petId');
+    const petId = Number(petIdParam);
+    return Number.isInteger(petId) && petId > 0 ? petId : null;
+  })();
+  const navigationAction = stateNavigationAction ?? (
+    notificationPetId == null
+      ? null
+      : { petId: notificationPetId, type: 'view' as const }
+  );
 
   useEffect(() => {
     if (!navigationAction) {
@@ -1012,7 +1143,7 @@ export default function PetFinderPage() {
       return;
     }
 
-    if (isLoading || lostPets.length === 0) return;
+    if (isLoading) return;
 
     const actionKey = `${location.key}:${navigationAction.type}:${navigationAction.petId}`;
     if (handledNavigationAction.current === actionKey) return;

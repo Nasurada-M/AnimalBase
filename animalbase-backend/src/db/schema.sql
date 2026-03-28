@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS users (
   address      TEXT,
   avatar_url   TEXT,
   new_pet_email_notifications_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  pet_finder_email_notifications_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   role         user_role NOT NULL DEFAULT 'user',
   joined_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),

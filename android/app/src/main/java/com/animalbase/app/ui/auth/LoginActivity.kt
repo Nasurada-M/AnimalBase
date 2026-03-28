@@ -23,6 +23,10 @@ import java.io.IOException
 
 class LoginActivity : AppCompatActivity() {
 
+    companion object {
+        const val EXTRA_PREFILL_EMAIL = "prefill_email"
+    }
+
     private lateinit var binding: ActivityLoginBinding
     private val session by lazy { com.animalbase.app.utils.SessionManager(this) }
 
@@ -30,6 +34,7 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.etEmail.setText(intent.getStringExtra(EXTRA_PREFILL_EMAIL).orEmpty())
 
         if (intent.getBooleanExtra("session_expired", false)) {
             showSessionExpiredMessage()
@@ -40,12 +45,12 @@ class LoginActivity : AppCompatActivity() {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
         binding.tvForgotPassword.setOnClickListener {
-            val email = binding.etEmail.text.toString().trim()
-            if (email.isEmpty()) {
-                showToast("Enter your email first")
-                return@setOnClickListener
-            }
-            sendForgotPassword(email)
+            startActivity(
+                ForgotPasswordActivity.createIntent(
+                    this,
+                    binding.etEmail.text?.toString()?.trim()
+                )
+            )
         }
     }
 
@@ -129,18 +134,6 @@ class LoginActivity : AppCompatActivity() {
         }
 
         return LoginAttemptResult(success = false, message = lastMessage, networkFailure = lastNetworkFailure)
-    }
-
-    private fun sendForgotPassword(email: String) {
-        lifecycleScope.launch {
-            try {
-                RetrofitClient.getApiService(this@LoginActivity)
-                    .forgotPassword(com.animalbase.app.models.ForgotPasswordRequest(email))
-                showToast("If registered, reset instructions sent to $email")
-            } catch (e: Exception) {
-                showToast("Error: ${e.message}")
-            }
-        }
     }
 
     private fun showConnectionDialog() {

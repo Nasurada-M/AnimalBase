@@ -12,11 +12,16 @@ import com.animalbase.app.models.MissingPetReportRequest
 import com.animalbase.app.ui.base.SessionAwareActivity
 import com.animalbase.app.utils.ImageLoader
 import com.animalbase.app.utils.PhpCurrencyFormatter
+import com.animalbase.app.utils.RegionalPhoneUtils
+import com.animalbase.app.utils.bindPangasinanLocationAutocomplete
+import com.animalbase.app.utils.isPangasinanLocation
+import com.animalbase.app.utils.pangasinanLocationValidationMessage
 import com.animalbase.app.utils.petTextInputFilter
 import com.animalbase.app.utils.normalizeWeightForStorage
 import com.animalbase.app.utils.gone
 import com.animalbase.app.utils.showDatePicker
 import com.animalbase.app.utils.showToast
+import com.animalbase.app.utils.tintRequiredAsterisks
 import com.animalbase.app.utils.visible
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -110,15 +115,23 @@ class ReportMissingActivity : SessionAwareActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityReportMissingBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.root.tintRequiredAsterisks()
 
         setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        RegionalPhoneUtils.bindLocalPhoneInput(binding.etOwnerPhone)
         binding.etPetName.filters = arrayOf(petTextInputFilter())
         binding.etBreed.filters = arrayOf(petTextInputFilter())
         binding.etColorAppearance.filters = arrayOf(petTextInputFilter(allowComma = true))
         binding.etDescription.filters = arrayOf(petTextInputFilter(multiline = true, allowComma = true))
         binding.etDistinctiveFeatures.filters = arrayOf(petTextInputFilter(multiline = true, allowComma = true))
         binding.etLastSeenLocation.filters = arrayOf(petTextInputFilter(allowComma = true))
+        bindPangasinanLocationAutocomplete(
+            binding.etLastSeenLocation,
+            binding.tilLastSeenLocation,
+            lifecycleScope,
+            api
+        )
 
         binding.acPetType.setAdapter(
             ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, listOf("Dog", "Cat", "Bird", "Rabbit", "Other"))
@@ -137,15 +150,22 @@ class ReportMissingActivity : SessionAwareActivity() {
         session.getUser()?.let { user ->
             binding.etOwnerName.setText(user.fullName)
             binding.etOwnerEmail.setText(user.email)
-            binding.etOwnerPhone.setText(user.phone)
+            binding.etOwnerPhone.setText(RegionalPhoneUtils.sanitizeLocalNumber(user.phone.orEmpty()))
         }
 
         updatePhotoPreview(null)
         binding.etLastSeenDate.setOnClickListener {
-            showDatePicker { binding.etLastSeenDate.setText(it) }
+            openLastSeenDatePicker()
         }
+        binding.tilLastSeenDate.setEndIconOnClickListener { openLastSeenDatePicker() }
         binding.btnPickPhoto.setOnClickListener { photoPickerLauncher.launch("image/*") }
         binding.btnSubmitReport.setOnClickListener { submitReport() }
+    }
+
+    private fun openLastSeenDatePicker() {
+        showDatePicker(binding.etLastSeenDate.text?.toString()) {
+            binding.etLastSeenDate.setText(it)
+        }
     }
 
     private fun submitReport() {
@@ -167,7 +187,9 @@ class ReportMissingActivity : SessionAwareActivity() {
             ),
             ownerName = binding.etOwnerName.text?.toString().orEmpty().trim(),
             ownerEmail = binding.etOwnerEmail.text?.toString().orEmpty().trim(),
-            ownerPhone = binding.etOwnerPhone.text?.toString().orEmpty().trim()
+            ownerPhone = RegionalPhoneUtils.sanitizeLocalNumber(
+                binding.etOwnerPhone.text?.toString().orEmpty()
+            )
         )
 
         if (payload.petName.isBlank() || payload.type.isBlank() || payload.breed.isBlank() ||
@@ -178,6 +200,17 @@ class ReportMissingActivity : SessionAwareActivity() {
             showToast("Please fill in all required fields.")
             return
         }
+        if (!isPangasinanLocation(payload.lastSeenLocation)) {
+            binding.tilLastSeenLocation.error = pangasinanLocationValidationMessage("Last seen location")
+            return
+        }
+        binding.tilLastSeenLocation.error = null
+        if (!RegionalPhoneUtils.isValidLocalNumber(payload.ownerPhone)) {
+            binding.etOwnerPhone.error = RegionalPhoneUtils.validationMessage()
+            binding.etOwnerPhone.requestFocus()
+            return
+        }
+        binding.etOwnerPhone.error = null
 
         binding.progressBar.visible()
         binding.btnSubmitReport.isEnabled = false

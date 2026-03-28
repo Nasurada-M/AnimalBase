@@ -119,17 +119,21 @@
                     android:id="@+id/btnView"
                     style="@style/Widget.AnimalBase.Button.Outline"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="48dp"
                     android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
                     android:text="View" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSighting"
                     style="@style/Widget.AnimalBase.Button"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="48dp"
                     android:layout_marginStart="10dp"
                     android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
                     android:text="Sighting" />
             </LinearLayout>
         </LinearLayout>

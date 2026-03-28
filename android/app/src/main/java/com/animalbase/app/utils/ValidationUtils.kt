@@ -5,9 +5,30 @@ package com.animalbase.app.utils
  * Mirrors the express-validator rules in backend/src/routes/auth.js
  */
 object ValidationUtils {
+    private val approvedGenericEmailEndings = setOf(
+        ".com",
+        ".edu",
+        ".org",
+        ".net",
+        ".gov",
+        ".mil",
+        ".info",
+        ".io",
+        ".co"
+    )
+    private val countryCodeEmailEndingPattern = Regex("\\.[a-z]{2}$", RegexOption.IGNORE_CASE)
 
     fun isValidEmail(email: String): Boolean {
         return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    }
+
+    fun hasApprovedEmailEnding(email: String): Boolean {
+        val normalizedEmail = email.trim().lowercase()
+        if (!isValidEmail(normalizedEmail)) return false
+
+        val domain = normalizedEmail.substringAfter("@", "")
+        return approvedGenericEmailEndings.any { domain.endsWith(it) }
+            || countryCodeEmailEndingPattern.containsMatchIn(domain)
     }
 
     /**
@@ -30,8 +51,7 @@ object ValidationUtils {
     }
 
     fun isValidPhoneNumber(phone: String): Boolean {
-        val cleaned = phone.replace(Regex("[\\s\\-\\(\\)\\+]"), "")
-        return cleaned.length in 7..15 && cleaned.all { it.isDigit() }
+        return RegionalPhoneUtils.isValidLocalNumber(phone)
     }
 
     fun isValidName(name: String): Boolean = name.trim().length >= 2
@@ -51,7 +71,7 @@ object ValidationUtils {
         if (petType.isBlank()) return Pair(false, "Pet type is required")
         if (!isValidDate(dateLastSeen)) return Pair(false, "Valid date is required (YYYY-MM-DD)")
         if (location.isBlank()) return Pair(false, "Location is required")
-        if (!isValidPhoneNumber(contactNumber)) return Pair(false, "Valid contact number is required")
+        if (!isValidPhoneNumber(contactNumber)) return Pair(false, RegionalPhoneUtils.validationMessage())
         if (!isValidEmail(email)) return Pair(false, "Valid email is required")
         return Pair(true, "")
     }
@@ -62,7 +82,7 @@ object ValidationUtils {
     ): Pair<Boolean, String> {
         if (!isValidName(fullName)) return Pair(false, "Full name is required")
         if (!isValidEmail(email)) return Pair(false, "Valid email is required")
-        if (!isValidPhoneNumber(phone)) return Pair(false, "Valid phone number is required")
+        if (!isValidPhoneNumber(phone)) return Pair(false, RegionalPhoneUtils.validationMessage())
         if (address.isBlank()) return Pair(false, "Home address is required")
         if (whyAdopt.isBlank()) return Pair(false, "Please explain why you want to adopt")
         return Pair(true, "")

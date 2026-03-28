@@ -38,15 +38,17 @@
 
                     <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="310dp">
+                        android:layout_height="wrap_content">
 
                         <ImageView
                             android:id="@+id/ivPetDetailImage"
                             android:layout_width="match_parent"
-                            android:layout_height="match_parent"
+                            android:layout_height="wrap_content"
                             android:adjustViewBounds="true"
+                            android:background="@color/pet_detail_info_background"
                             android:contentDescription="@null"
-                            android:scaleType="centerCrop"
+                            android:minHeight="280dp"
+                            android:scaleType="fitCenter"
                             android:src="@drawable/ic_placeholder_pet" />
 
                         <View

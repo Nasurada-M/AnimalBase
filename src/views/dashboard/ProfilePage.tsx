@@ -309,47 +309,68 @@ function NotificationSettings({ onBack }: { onBack: () => void }) {
   const [settings, setSettings] = useState({
     applicationUpdates: true,
     newPets: user?.newPetEmailNotificationsEnabled ?? true,
-    petFinderAlerts: false,
+    petFinderAlerts: user?.petFinderEmailNotificationsEnabled ?? true,
     weeklyDigest: true,
     promotions: false,
   });
-  const [savingPreference, setSavingPreference] = useState(false);
+  const [savingPreferenceKey, setSavingPreferenceKey] = useState<'newPets' | 'petFinderAlerts' | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
-    setSettings(s => ({ ...s, newPets: user?.newPetEmailNotificationsEnabled ?? true }));
-  }, [user?.newPetEmailNotificationsEnabled]);
+    setSettings(s => ({
+      ...s,
+      newPets: user?.newPetEmailNotificationsEnabled ?? true,
+      petFinderAlerts: user?.petFinderEmailNotificationsEnabled ?? true,
+    }));
+  }, [user?.newPetEmailNotificationsEnabled, user?.petFinderEmailNotificationsEnabled]);
 
   const toggle = async (k: keyof typeof settings) => {
     const nextValue = !settings[k];
     setSettings(s => ({ ...s, [k]: nextValue }));
 
-    if (k !== 'newPets') return;
+    if (k !== 'newPets' && k !== 'petFinderAlerts') return;
 
-    setSavingPreference(true);
+    setSavingPreferenceKey(k);
     setFeedback(null);
 
-    const updated = await updateUser({ newPetEmailNotificationsEnabled: nextValue });
+    const updated = await updateUser(
+      k === 'newPets'
+        ? { newPetEmailNotificationsEnabled: nextValue }
+        : { petFinderEmailNotificationsEnabled: nextValue }
+    );
 
-    setSavingPreference(false);
+    setSavingPreferenceKey(null);
 
     if (!updated) {
-      setSettings(s => ({ ...s, newPets: !nextValue }));
-      setFeedback({ type: 'error', message: 'Could not update your email notification preference.' });
+      setSettings(s => ({ ...s, [k]: !nextValue }));
+      setFeedback({
+        type: 'error',
+        message: k === 'newPets'
+          ? 'Could not update your new-pet email alert preference.'
+          : 'Could not update your Pet Finder email alert preference.',
+      });
       return;
     }
 
     setFeedback({
       type: 'success',
-      message: nextValue
-        ? 'Email alerts for newly available pets are turned on.'
-        : 'Email alerts for newly available pets are turned off.',
+      message: k === 'newPets'
+        ? (
+          nextValue
+            ? 'Email alerts for newly available pets are turned on.'
+            : 'Email alerts for newly available pets are turned off.'
+        )
+        : (
+          nextValue
+            ? 'Email alerts for new Pet Finder reports are turned on.'
+            : 'Email alerts for new Pet Finder reports are turned off.'
+        ),
     });
   };
   const Toggle = ({ k }: { k: keyof typeof settings }) => (
     <button
       onClick={() => { void toggle(k); }}
-      disabled={k === 'newPets' && savingPreference}
+      disabled={(k === 'newPets' || k === 'petFinderAlerts') && savingPreferenceKey === k}
       className={`relative w-12 h-6 rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${settings[k] ? 'bg-primary-600' : 'bg-gray-200'}`}
     >
       <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${settings[k] ? 'translate-x-6' : ''}`} />
@@ -383,7 +404,7 @@ function NotificationSettings({ onBack }: { onBack: () => void }) {
             <div>
               <p className="font-semibold text-gray-800 text-sm">{label}</p>
               <p className="text-xs text-gray-400">{desc}</p>
-              {key === 'newPets' && savingPreference && (
+              {(key === 'newPets' || key === 'petFinderAlerts') && savingPreferenceKey === key && (
                 <p className="text-xs text-primary-500 mt-1">Saving your email preference...</p>
               )}
             </div>

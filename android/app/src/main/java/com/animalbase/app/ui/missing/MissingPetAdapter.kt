@@ -12,7 +12,8 @@ import com.animalbase.app.utils.PhpCurrencyFormatter
 
 class MissingPetAdapter(
     private val onView: (MissingPet) -> Unit,
-    private val onSighting: (MissingPet) -> Unit
+    private val onSighting: (MissingPet) -> Unit,
+    private val isOwner: (MissingPet) -> Boolean = { false }
 ) : RecyclerView.Adapter<MissingPetAdapter.ViewHolder>() {
 
     private val pets = mutableListOf<MissingPet>()
@@ -52,7 +53,7 @@ class MissingPetAdapter(
 
             root.setOnClickListener { onView(pet) }
             btnView.setOnClickListener { onView(pet) }
-            btnSighting.visibility = if (pet.status == "Missing") android.view.View.VISIBLE else android.view.View.GONE
+            btnSighting.visibility = if (pet.status == "Missing" && !isOwner(pet)) android.view.View.VISIBLE else android.view.View.GONE
             btnSighting.setOnClickListener { onSighting(pet) }
         }
     }

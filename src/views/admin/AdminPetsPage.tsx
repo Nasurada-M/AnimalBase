@@ -2,11 +2,34 @@ import { useEffect, useState, useRef } from 'react';
 import { AlertTriangle, Plus, Edit3, Trash2, X, Loader2, Upload, ImageIcon } from 'lucide-react';
 import ModalPortal from '../../components/ModalPortal';
 import ClearableSearchField from '../../components/ClearableSearchField';
+import PangasinanLocationInput from '../../components/PangasinanLocationInput';
 import { adminApi, ApiPet } from '../../services/api';
-import { sanitizePetAddressInput, sanitizePetPhoneInput, sanitizePetTextInput } from '../../utils/petTextSanitizers';
+import { sanitizePetAddressInput, sanitizePetTextInput } from '../../utils/petTextSanitizers';
 import { formatWeightForStorage, getWeightInputValue } from '../../utils/petWeight';
+import {
+  getPangasinanLocationValidationMessage,
+  isPangasinanLocationValue,
+} from '../../utils/pangasinanLocation';
+import {
+  formatPhilippinePhoneNumber,
+  getPhilippinePhoneValidationMessage,
+  isValidPhilippinePhoneNumber,
+  PHILIPPINES_DIAL_CODE,
+  PHILIPPINES_LOCAL_PHONE_LENGTH,
+  PHILIPPINES_PHONE_PLACEHOLDER,
+  sanitizePhilippinePhoneNumber,
+} from '../../utils/philippinePhone';
 
-const PET_TYPES = ['Dogs','Cats','Birds','Small Animals','Reptiles','Other'];
+type SelectOption = string | { value: string; label: string };
+
+const PET_TYPES = [
+  { value: 'Dogs', label: 'Dog' },
+  { value: 'Cats', label: 'Cat' },
+  { value: 'Birds', label: 'Bird' },
+  { value: 'Small Animals', label: 'Small Animal' },
+  { value: 'Reptiles', label: 'Reptile' },
+  { value: 'Other', label: 'Other' },
+] as const;
 const PET_STATUSES = ['Available','Pending','Adopted'];
 const EDITABLE_PET_STATUSES = PET_STATUSES.filter((status) => status !== 'Adopted');
 const GENDERS = ['Male','Female'];
@@ -21,12 +44,11 @@ const SANITIZED_ADMIN_FIELDS = new Set<keyof ApiPet>([
 ]);
 const MULTILINE_ADMIN_FIELDS = new Set<keyof ApiPet>(['description', 'distinctiveFeatures']);
 const COMMA_ADMIN_FIELDS = new Set<keyof ApiPet>(['colorAppearance', 'description', 'distinctiveFeatures']);
-const PHONE_ADMIN_FIELDS = new Set<keyof ApiPet>(['shelterPhone']);
 const ADDRESS_ADMIN_FIELDS = new Set<keyof ApiPet>(['location']);
 const ADOPTED_PET_LOCK_MESSAGE = 'This pet has already been adopted by its new owners.';
 
 const EMPTY: Partial<ApiPet> = {
-  name:'', type:'Dogs', breed:'', gender:'Male', age:AGE_RANGES[0], weight:'',
+  name:'', type:PET_TYPES[0].value, breed:'', gender:'Male', age:AGE_RANGES[0], weight:'',
   colorAppearance:'', description:'', distinctiveFeatures:'', imageUrl:'',
   status:'Available', shelterName:'', shelterEmail:'', shelterPhone:'', location:'',
 };
@@ -60,27 +82,37 @@ interface SelectFieldProps {
   label: string;
   k: keyof ApiPet;
   required?: boolean;
-  options: string[];
+  options: readonly SelectOption[];
   form: Partial<ApiPet>;
   onChange: (k: keyof ApiPet) => (e: React.ChangeEvent<HTMLSelectElement>) => void;
 }
 
-const SelectField = ({ label, k, required = false, options, form, onChange }: SelectFieldProps) => (
-  <div>
-    <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-      {label} {required && <span className="text-red-400">*</span>}
-    </label>
-    <select className="input-field" value={(form as Record<string, string>)[k] || options[0]} onChange={onChange(k)}>
-      {options.map(o => <option key={o}>{o}</option>)}
-    </select>
-  </div>
-);
+const SelectField = ({ label, k, required = false, options, form, onChange }: SelectFieldProps) => {
+  const normalizedOptions = options.map((option) =>
+    typeof option === 'string' ? { value: option, label: option } : option
+  );
+
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+        {label} {required && <span className="text-red-400">*</span>}
+      </label>
+      <select
+        className="input-field"
+        value={(form as Record<string, string>)[k] || normalizedOptions[0]?.value}
+        onChange={onChange(k)}
+      >
+        {normalizedOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
 
 function sanitizeAdminValue(key: keyof ApiPet, value: string) {
-  if (PHONE_ADMIN_FIELDS.has(key)) {
-    return sanitizePetPhoneInput(value);
-  }
-
   if (ADDRESS_ADMIN_FIELDS.has(key)) {
     return sanitizePetAddressInput(value);
   }
@@ -134,6 +166,15 @@ export default function AdminPetsPage() {
     }));
   };
 
+  const setShelterPhone = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const localNumber = sanitizePhilippinePhoneNumber(e.target.value);
+
+    setForm((current) => ({
+      ...current,
+      shelterPhone: localNumber ? formatPhilippinePhoneNumber(localNumber) : '',
+    }));
+  };
+
   const openCreate = () => {
     setForm({ ...EMPTY });
     setEditId(null);
@@ -177,30 +218,42 @@ export default function AdminPetsPage() {
   };
 
   const handleSave = async () => {
+    if (form.location?.trim() && !isPangasinanLocationValue(form.location)) {
+      setMsgType('error');
+      setMsg(getPangasinanLocationValidationMessage('Shelter location'));
+      return;
+    }
+
+    if (form.shelterPhone?.trim() && !isValidPhilippinePhoneNumber(form.shelterPhone)) {
+      setMsgType('error');
+      setMsg(`Shelter phone: ${getPhilippinePhoneValidationMessage()}`);
+      return;
+    }
+
     setSaving(true);
     try {
-      // If a new image file was selected, upload it first (or convert to base64/URL as needed)
-      let imageUrl = form.imageUrl || '';
-      if (imageFile) {
-        // Option A: if your API accepts multipart, use FormData
-        // Option B: use the base64 preview as the URL (works for many setups)
-        // Adjust the line below to match your actual upload API:
-        imageUrl = imagePreview; // replace with: await adminApi.uploadImage(imageFile)
-      }
-
       const payload = {
         ...form,
-        imageUrl,
+        imageUrl: form.imageUrl || '',
         weight: formatWeightForStorage(form.weight),
       };
+      const formData = new FormData();
+
+      Object.entries(payload).forEach(([key, value]) => {
+        formData.append(key, value == null ? '' : String(value));
+      });
+
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
 
       if (editId) {
-        const updated = await adminApi.updatePet(editId, payload);
+        const updated = await adminApi.updatePet(editId, formData);
         setPets(p => p.map(x => x.id === updated.id ? updated : x));
         setMsgType('success');
         setMsg('Pet updated successfully.');
       } else {
-        const created = await adminApi.createPet(payload);
+        const created = await adminApi.createPet(formData);
         setPets(p => [created, ...p]);
         setMsgType('success');
         setMsg('Pet created successfully.');
@@ -415,8 +468,37 @@ export default function AdminPetsPage() {
               </div>
               <Field label="Shelter Name"  k="shelterName"  placeholder="e.g. Paws Haven Shelter" form={form} onChange={set} />
               <Field label="Shelter Email" k="shelterEmail" placeholder="e.g. shelter@example.com" form={form} onChange={set} />
-              <Field label="Shelter Phone" k="shelterPhone" placeholder="e.g. 0912-345-6789" form={form} onChange={set} />
-              <Field label="Location"      k="location"     placeholder="e.g. Quezon City, Metro Manila" form={form} onChange={set} />
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Shelter Phone</label>
+                <div className="flex items-center overflow-hidden rounded-xl border border-primary-200 bg-white transition-all focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-200">
+                  <span className="flex h-full items-center border-r border-primary-100 bg-primary-50 px-4 py-3 text-sm font-semibold text-gray-500">
+                    {PHILIPPINES_DIAL_CODE}
+                  </span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="min-w-0 flex-1 border-0 bg-transparent px-4 py-3 text-sm font-sans text-gray-800 outline-none placeholder:text-primary-300"
+                    placeholder={PHILIPPINES_PHONE_PLACEHOLDER}
+                    value={sanitizePhilippinePhoneNumber(form.shelterPhone || '')}
+                    onChange={setShelterPhone}
+                    maxLength={PHILIPPINES_LOCAL_PHONE_LENGTH}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  Enter up to 11 digits for a Philippine mobile number starting with 09.
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Location</label>
+                <PangasinanLocationInput
+                  value={form.location || ''}
+                  onChange={(value) => setForm((current) => ({ ...current, location: value }))}
+                  placeholder="Search Pangasinan shelter location"
+                  maxLength={255}
+                  helperText="Shelter location suggestions are limited to Pangasinan, Philippines."
+                />
+              </div>
 
               <div className="col-span-2 flex gap-3 mt-2">
                 <button onClick={() => setShowForm(false)} className="btn-secondary flex-1">Cancel</button>

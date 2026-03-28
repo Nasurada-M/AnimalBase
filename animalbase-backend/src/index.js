@@ -1,10 +1,12 @@
 require('dotenv').config();
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const pool = require('./db/pool');
 const { bootstrapDatabase } = require('./db/bootstrap');
 const { initMailer } = require('./controllers/authController');
+const { attachNotificationWebSocketServer } = require('./realtime/websocketServer');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -28,6 +30,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/locations', require('./routes/locations'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/pets', require('./routes/pets'));
 app.use('/api/applications', require('./routes/applications'));
@@ -65,9 +68,12 @@ async function startServer() {
   try {
     const { createdDatabase } = await bootstrapDatabase();
     await pool.query('SELECT 1');
+    const server = http.createServer(app);
+    attachNotificationWebSocketServer(server);
 
-    app.listen(PORT, HOST, () => {
+    server.listen(PORT, HOST, () => {
       console.log(`AnimalBase API running on http://${HOST}:${PORT}`);
+      console.log(`WebSocket   : ws://${HOST}:${PORT}/ws`);
       console.log(`Environment : ${process.env.NODE_ENV || 'development'}`);
       console.log(`Database    : ${process.env.DB_NAME}@${process.env.DB_HOST}`);
 

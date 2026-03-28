@@ -19,10 +19,20 @@ class PetAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemPetCardBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         if (fillCellWidth) {
-            binding.root.layoutParams = RecyclerView.LayoutParams(
+            val originalParams = binding.root.layoutParams
+            val updatedParams = RecyclerView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                binding.root.layoutParams?.height ?: ViewGroup.LayoutParams.WRAP_CONTENT
+                originalParams?.height ?: ViewGroup.LayoutParams.WRAP_CONTENT
             )
+            if (originalParams is ViewGroup.MarginLayoutParams) {
+                updatedParams.setMargins(
+                    originalParams.leftMargin,
+                    originalParams.topMargin,
+                    originalParams.rightMargin,
+                    originalParams.bottomMargin
+                )
+            }
+            binding.root.layoutParams = updatedParams
         }
         return ViewHolder(binding)
     }

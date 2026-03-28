@@ -3,6 +3,7 @@ package com.animalbase.app.ui.notifications
 import android.os.Bundle
 import android.view.View
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.animalbase.app.api.RetrofitClient
 import com.animalbase.app.databinding.ActivityNotificationsBinding
@@ -10,6 +11,7 @@ import com.animalbase.app.models.Notification
 import com.animalbase.app.ui.base.SessionAwareActivity
 import com.animalbase.app.utils.NotificationNavigator
 import com.animalbase.app.utils.NotificationStateStore
+import com.animalbase.app.utils.NotificationSwipeDismissCallback
 import com.animalbase.app.utils.gone
 import com.animalbase.app.utils.showToast
 import com.animalbase.app.utils.visible
@@ -44,16 +46,23 @@ class NotificationsActivity : SessionAwareActivity() {
             },
             onMarkRead = { notification ->
                 markNotificationAsRead(notification)
-            },
-            onClear = { notification ->
-                clearNotification(notification)
             }
         )
 
         binding.rvNotifications.layoutManager = LinearLayoutManager(this)
         binding.rvNotifications.adapter = notificationsAdapter
+        ItemTouchHelper(
+            NotificationSwipeDismissCallback(this) { position ->
+                val notification = notificationsAdapter.getNotificationAt(position)
+                if (notification == null) {
+                    notificationsAdapter.submitList(latestNotifications.toList())
+                } else {
+                    clearNotification(notification, showFeedback = true)
+                }
+            }
+        ).attachToRecyclerView(binding.rvNotifications)
+
         binding.btnMarkAllRead.setOnClickListener { markAllNotificationsAsRead() }
-        binding.btnClearAllRead.setOnClickListener { clearAllReadNotifications() }
     }
 
     override fun onResume() {
@@ -72,7 +81,6 @@ class NotificationsActivity : SessionAwareActivity() {
             try {
                 binding.progressBar.visible()
                 val response = api.getNotifications(scope = "user")
-                binding.progressBar.gone()
 
                 if (response.isSuccessful) {
                     latestNotifications = notificationStore
@@ -83,24 +91,22 @@ class NotificationsActivity : SessionAwareActivity() {
                     showToast("Unable to load notifications")
                 }
             } catch (_: Exception) {
-                binding.progressBar.gone()
                 showToast("Error loading notifications")
+            } finally {
+                binding.progressBar.gone()
             }
         }
     }
 
     private fun renderNotifications() {
         val unreadCount = latestNotifications.count { !it.isRead }
-        val readCount = latestNotifications.count { it.isRead }
-        binding.tvUnreadCount.text = if (unreadCount == 1) "1 unread" else "$unreadCount unread"
+        binding.tvUnreadCount.text = formatUnreadSummary(unreadCount)
         binding.btnMarkAllRead.isEnabled = unreadCount > 0
         binding.btnMarkAllRead.alpha = if (unreadCount > 0) 1f else 0.5f
-        binding.btnClearAllRead.isEnabled = readCount > 0
-        binding.btnClearAllRead.alpha = if (readCount > 0) 1f else 0.5f
 
         binding.tvEmpty.visibility = if (latestNotifications.isEmpty()) View.VISIBLE else View.GONE
         binding.rvNotifications.visibility = if (latestNotifications.isEmpty()) View.GONE else View.VISIBLE
-        notificationsAdapter.submitList(latestNotifications)
+        notificationsAdapter.submitList(latestNotifications.toList())
     }
 
     private fun markNotificationAsRead(notification: Notification) {
@@ -114,22 +120,14 @@ class NotificationsActivity : SessionAwareActivity() {
         }
     }
 
-    private fun clearNotification(notification: Notification) {
+    private fun clearNotification(notification: Notification, showFeedback: Boolean = false) {
         val userId = session.getUser()?.effectiveUserId ?: return
         notificationStore.clearNotification(userId, notification.id)
         latestNotifications = latestNotifications.filterNot { it.id == notification.id }
         renderNotifications()
-    }
-
-    private fun clearAllReadNotifications() {
-        val userId = session.getUser()?.effectiveUserId ?: return
-        val readIds = latestNotifications.filter { it.isRead }.map { it.id }
-        if (readIds.isEmpty()) return
-
-        notificationStore.clearNotifications(userId, readIds)
-        latestNotifications = latestNotifications.filterNot { it.isRead }
-        renderNotifications()
-        showToast("Read notifications cleared")
+        if (showFeedback) {
+            showToast("Notification cleared")
+        }
     }
 
     private fun markAllNotificationsAsRead() {
@@ -141,5 +139,10 @@ class NotificationsActivity : SessionAwareActivity() {
         latestNotifications = latestNotifications.map { it.copy(isRead = true) }
         renderNotifications()
         showToast("All marked as read")
+    }
+
+    private fun formatUnreadSummary(unreadCount: Int): String {
+        val unreadLabel = if (unreadCount == 1) "1 unread" else "$unreadCount unread"
+        return if (latestNotifications.isEmpty()) unreadLabel else "$unreadLabel | Swipe left to clear"
     }
 }

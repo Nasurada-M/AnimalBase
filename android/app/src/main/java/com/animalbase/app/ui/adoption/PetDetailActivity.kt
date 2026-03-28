@@ -10,6 +10,7 @@ import com.animalbase.app.R
 import com.animalbase.app.api.RetrofitClient
 import com.animalbase.app.databinding.ActivityPetDetailBinding
 import com.animalbase.app.ui.base.SessionAwareActivity
+import com.animalbase.app.ui.common.ImagePreviewActivity
 import com.animalbase.app.utils.formatWeightForDisplay
 import com.animalbase.app.utils.ImageLoader
 import com.animalbase.app.utils.showToast
@@ -21,6 +22,8 @@ class PetDetailActivity : SessionAwareActivity() {
     private lateinit var binding: ActivityPetDetailBinding
     private val api by lazy { RetrofitClient.getApiService(this) }
     private var petId: Int = 0
+    private var currentImageUrl: String? = null
+    private var currentImageTitle: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +39,15 @@ class PetDetailActivity : SessionAwareActivity() {
 
         petId = intent.getIntExtra("pet_id", 0)
         if (petId > 0) loadPet()
+
+        binding.ivPetDetailImage.setOnClickListener {
+            val imageUrl = currentImageUrl?.takeIf { value -> value.isNotBlank() } ?: return@setOnClickListener
+            ImagePreviewActivity.open(
+                this,
+                imageUrl,
+                currentImageTitle ?: binding.tvAboutTitle.text?.toString()
+            )
+        }
 
         binding.btnAdoptNow.setOnClickListener {
             if (!session.isLoggedIn()) {
@@ -88,8 +100,9 @@ class PetDetailActivity : SessionAwareActivity() {
                     val color = pet.colorAppearance?.takeIf { it.isNotBlank() } ?: "Not specified"
                     val features = pet.distinctiveFeatures?.takeIf { it.isNotBlank() }
                     val shelterName = pet.shelterName?.takeIf { it.isNotBlank() } ?: "AnimalBase Shelter House"
+                    val displayPetName = petName.replaceFirstChar { it.uppercase() }
 
-                    binding.tvAboutTitle.text = "About ${petName.replaceFirstChar { it.uppercase() }}"
+                    binding.tvAboutTitle.text = "About $displayPetName"
                     binding.tvPetDetailBreed.text = listOf(breed, type)
                         .filter { it.isNotBlank() }
                         .joinToString(" - ")
@@ -136,7 +149,16 @@ class PetDetailActivity : SessionAwareActivity() {
                     binding.tvPetDetailStatus.setTextColor(statusTextColor)
 
                     val imageUrl = pet.photoUrls.firstOrNull() ?: pet.photos.firstOrNull()
-                    ImageLoader.loadPetImage(this@PetDetailActivity, imageUrl, binding.ivPetDetailImage)
+                    currentImageUrl = imageUrl
+                    currentImageTitle = displayPetName
+                    binding.ivPetDetailImage.isClickable = !imageUrl.isNullOrBlank()
+                    binding.ivPetDetailImage.isFocusable = !imageUrl.isNullOrBlank()
+                    binding.ivPetDetailImage.contentDescription = if (imageUrl.isNullOrBlank()) {
+                        null
+                    } else {
+                        "$displayPetName photo"
+                    }
+                    ImageLoader.loadPetDetailImage(this@PetDetailActivity, imageUrl, binding.ivPetDetailImage)
 
                     binding.btnAdoptNow.text = "Adopt ${pet.petName.ifBlank { "Now" }}"
                     binding.btnAdoptNow.isEnabled = true

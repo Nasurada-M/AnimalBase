@@ -1,5 +1,10 @@
 package com.animalbase.app.utils
 
+import android.text.Editable
+import android.text.InputFilter
+import android.text.TextWatcher
+import android.widget.EditText
+
 data class PhoneRegionOption(
     val code: String,
     val label: String,
@@ -26,6 +31,61 @@ object RegionalPhoneUtils {
     )
 
     fun defaultRegion(): PhoneRegionOption = regions.first()
+
+    private fun digitsOnlyInputFilter(): InputFilter = InputFilter { source, start, end, _, _, _ ->
+        val filtered = buildString {
+            for (index in start until end) {
+                val character = source[index]
+                if (character.isDigit()) {
+                    append(character)
+                }
+            }
+        }
+
+        when {
+            filtered.length == end - start -> null
+            filtered.isEmpty() -> ""
+            else -> filtered
+        }
+    }
+
+    fun bindLocalPhoneInput(
+        editText: EditText,
+        regionProvider: () -> PhoneRegionOption = ::defaultRegion
+    ) {
+        editText.filters = arrayOf(digitsOnlyInputFilter())
+
+        editText.addTextChangedListener(object : TextWatcher {
+            private var isUpdating = false
+
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+
+            override fun afterTextChanged(s: Editable?) {
+                if (isUpdating) return
+
+                val region = regionProvider()
+                val current = s?.toString().orEmpty()
+                val sanitized = sanitizeLocalNumber(current, region)
+                if (current == sanitized) return
+
+                isUpdating = true
+                editText.setText(sanitized)
+                editText.setSelection(sanitized.length)
+                isUpdating = false
+            }
+        })
+
+        val region = regionProvider()
+        editText.hint = region.placeholder
+        val current = editText.text?.toString().orEmpty()
+        val sanitized = sanitizeLocalNumber(current, region)
+        if (current != sanitized) {
+            editText.setText(sanitized)
+            editText.setSelection(sanitized.length)
+        }
+    }
 
     fun sanitizeLocalNumber(value: String, region: PhoneRegionOption = defaultRegion()): String {
         val digitsOnly = value.filter { it.isDigit() }

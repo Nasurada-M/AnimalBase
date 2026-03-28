@@ -13,9 +13,14 @@ import com.animalbase.app.models.MissingPet
 import com.animalbase.app.models.SightingReportRequest
 import com.animalbase.app.ui.base.SessionAwareActivity
 import com.animalbase.app.utils.ImageLoader
+import com.animalbase.app.utils.RegionalPhoneUtils
+import com.animalbase.app.utils.bindPangasinanLocationAutocomplete
 import com.animalbase.app.utils.gone
+import com.animalbase.app.utils.isPangasinanLocation
+import com.animalbase.app.utils.pangasinanLocationValidationMessage
 import com.animalbase.app.utils.showDatePicker
 import com.animalbase.app.utils.showToast
+import com.animalbase.app.utils.tintRequiredAsterisks
 import com.animalbase.app.utils.visible
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -40,21 +45,30 @@ class ReportSightingActivity : SessionAwareActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityReportSightingBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.root.tintRequiredAsterisks()
 
         setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        RegionalPhoneUtils.bindLocalPhoneInput(binding.etReporterPhone)
 
         linkedMissingPetId = intent.getIntExtra("missing_pet_id", 0).takeIf { it > 0 }
 
         session.getUser()?.let { user ->
             binding.etReporterName.setText(user.fullName)
             binding.etReporterEmail.setText(user.email)
-            binding.etReporterPhone.setText(user.phone)
+            binding.etReporterPhone.setText(RegionalPhoneUtils.sanitizeLocalNumber(user.phone.orEmpty()))
         }
 
         binding.etDateSeen.setOnClickListener {
-            showDatePicker { binding.etDateSeen.setText(it) }
+            openDateSeenPicker()
         }
+        binding.tilDateSeen.setEndIconOnClickListener { openDateSeenPicker() }
+        bindPangasinanLocationAutocomplete(
+            binding.etLocationSeen,
+            binding.tilLocationSeen,
+            lifecycleScope,
+            api
+        )
         updatePhotoPreview(null)
         binding.btnPickPhoto.setOnClickListener { photoPickerLauncher.launch("image/*") }
         binding.btnSubmitSighting.setOnClickListener { submitSighting() }
@@ -62,11 +76,31 @@ class ReportSightingActivity : SessionAwareActivity() {
         loadMissingPets()
     }
 
+    private fun openDateSeenPicker() {
+        showDatePicker(binding.etDateSeen.text?.toString()) {
+            binding.etDateSeen.setText(it)
+        }
+    }
+
     private fun loadMissingPets() {
         lifecycleScope.launch {
             try {
                 val response = api.getMissingPets(status = "Missing")
-                missingPets = if (response.isSuccessful) response.body().orEmpty() else emptyList()
+                val allMissingPets = if (response.isSuccessful) response.body().orEmpty() else emptyList()
+                val linkedPet = linkedMissingPetId?.let { id -> allMissingPets.firstOrNull { it.id == id } }
+
+                if (linkedPet != null && isCurrentUsersPet(linkedPet)) {
+                    showToast("You cannot submit a sighting report for your own missing pet report.")
+                    finish()
+                    return@launch
+                }
+
+                missingPets = allMissingPets
+                    .filterNot(::isCurrentUsersPet)
+                    .sortedWith(
+                        compareByDescending<MissingPet> { it.reportedAt.orEmpty() }
+                            .thenBy { it.petName.lowercase() }
+                    )
                 setupMissingPetSelector()
             } catch (e: Exception) {
                 showToast(e.message ?: "Failed to load missing pets")
@@ -89,9 +123,23 @@ class ReportSightingActivity : SessionAwareActivity() {
         renderSelectedPet()
     }
 
+    private fun isCurrentUsersPet(pet: MissingPet): Boolean {
+        val currentUser = session.getUser()
+        val normalizedUserEmail = currentUser?.email?.trim()?.lowercase().orEmpty()
+
+        return (
+            currentUser != null &&
+                pet.reportedById != null &&
+                currentUser.effectiveUserId == pet.reportedById
+            ) || (
+                normalizedUserEmail.isNotBlank() &&
+                    pet.ownerEmail?.trim()?.lowercase() == normalizedUserEmail
+                )
+    }
+
     private fun renderSelectedPet() {
         val pet = selectedPet
-        val lockedToPet = linkedMissingPetId != null
+        val lockedToPet = linkedMissingPetId != null && pet != null
 
         binding.tilMissingPet.visibility = if (lockedToPet) View.GONE else View.VISIBLE
         binding.cardSelectedPet.visibility = if (pet != null) View.VISIBLE else View.GONE
@@ -120,7 +168,9 @@ class ReportSightingActivity : SessionAwareActivity() {
         val payload = SightingReportRequest(
             reporterName = binding.etReporterName.text?.toString().orEmpty().trim(),
             reporterEmail = binding.etReporterEmail.text?.toString().orEmpty().trim(),
-            reporterPhone = binding.etReporterPhone.text?.toString().orEmpty().trim(),
+            reporterPhone = RegionalPhoneUtils.sanitizeLocalNumber(
+                binding.etReporterPhone.text?.toString().orEmpty()
+            ),
             locationSeen = binding.etLocationSeen.text?.toString().orEmpty().trim(),
             dateSeen = binding.etDateSeen.text?.toString().orEmpty().trim(),
             description = binding.etDescription.text?.toString().orEmpty().trim(),
@@ -133,6 +183,17 @@ class ReportSightingActivity : SessionAwareActivity() {
             showToast("Please fill in all required fields.")
             return
         }
+        if (!isPangasinanLocation(payload.locationSeen)) {
+            binding.tilLocationSeen.error = pangasinanLocationValidationMessage("Sighting location")
+            return
+        }
+        binding.tilLocationSeen.error = null
+        if (!RegionalPhoneUtils.isValidLocalNumber(payload.reporterPhone)) {
+            binding.etReporterPhone.error = RegionalPhoneUtils.validationMessage()
+            binding.etReporterPhone.requestFocus()
+            return
+        }
+        binding.etReporterPhone.error = null
 
         binding.progressBar.visible()
         binding.btnSubmitSighting.isEnabled = false

@@ -8,6 +8,7 @@ const {
   adminGetAllSightings, deleteSighting,
 } = require('../controllers/adminController');
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const { upload } = require('../middleware/upload');
 
 router.use(authenticate, requireAdmin);
 
@@ -23,8 +24,8 @@ router.put   ('/users/:id/reset-password', resetUserPassword);
 
 // Pets
 router.get   ('/pets',     adminGetAllPets);
-router.post  ('/pets',     createPet);
-router.put   ('/pets/:id', updatePet);
+router.post  ('/pets',     upload.single('image'), createPet);
+router.put   ('/pets/:id', upload.single('image'), updatePet);
 router.delete('/pets/:id', deletePet);
 router.post  ('/pets/:id/reset-adoption', resetPetAdoption);
 

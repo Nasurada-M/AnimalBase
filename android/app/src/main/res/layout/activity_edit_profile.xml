@@ -231,8 +231,8 @@
                             android:id="@+id/etPhone"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Enter your phone number"
-                            android:inputType="phone"
+                            android:hint="09123456789"
+                            android:inputType="number"
                             android:minHeight="56dp"
                             android:textColor="@color/text_primary"
                             android:textColorHint="@color/secondary" />
@@ -254,16 +254,19 @@
                         android:layout_marginTop="8dp"
                         app:hintEnabled="false">
 
-                        <com.google.android.material.textfield.TextInputEditText
+                        <AutoCompleteTextView
                             android:id="@+id/etAddress"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:gravity="top|start"
-                            android:hint="Enter your address"
-                            android:inputType="textMultiLine"
+                            android:hint="Search Pangasinan barangay, city, or municipality"
+                            android:inputType="textPostalAddress|textMultiLine"
                             android:minHeight="96dp"
                             android:minLines="3"
+                            android:paddingStart="8dp"
                             android:paddingTop="16dp"
+                            android:paddingEnd="8dp"
+                            android:paddingBottom="16dp"
                             android:textColor="@color/text_primary"
                             android:textColorHint="@color/secondary" />
                     </com.google.android.material.textfield.TextInputLayout>

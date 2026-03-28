@@ -18,9 +18,16 @@ data class ForgotPasswordRequest(val email: String)
 data class UpdateProfileRequest(
     val fullName: String? = null,
     val phone: String? = null,
-    val address: String? = null
+    val address: String? = null,
+    val newPetEmailNotificationsEnabled: Boolean? = null,
+    val petFinderEmailNotificationsEnabled: Boolean? = null
 )
 data class ChangePasswordRequest(val currentPassword: String, val newPassword: String)
+data class ResetPasswordRequest(
+    val resetToken: String,
+    val newPassword: String,
+    val confirmPassword: String
+)
 data class DeleteAccountRequest(val password: String)
 data class StatusUpdateRequest(val status: String)
 data class AdoptionApplicationRequest(
@@ -38,6 +45,13 @@ data class ApiResponse(
     val success: Boolean = false,
     val message: String? = null
 )
+
+data class LocationSuggestion(
+    val label: String = "",
+    val kind: String? = null
+) {
+    override fun toString(): String = label
+}
 
 data class PhotoUploadResponse(
     val success: Boolean = false,
@@ -68,6 +82,15 @@ data class VerifyOtpResponse(
     val verified: Boolean = false
 )
 
+data class VerifyResetOtpResponse(
+    val message: String? = null,
+    val error: String? = null,
+    val details: String? = null,
+    val verified: Boolean = false,
+    val resetToken: String? = null,
+    val expiresInSeconds: Int? = null
+)
+
 @Parcelize
 data class User(
     val id: Int = 0,
@@ -76,6 +99,8 @@ data class User(
     val phone: String? = null,
     val address: String? = null,
     val avatarUrl: String? = null,
+    val newPetEmailNotificationsEnabled: Boolean? = null,
+    val petFinderEmailNotificationsEnabled: Boolean? = null,
     val role: String = "user",
     val joinedAt: String? = null,
     val createdAt: String? = null

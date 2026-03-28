@@ -3,8 +3,11 @@ import {
   authApi,
   ApiUser,
   clearToken,
+  getStoredToken,
   getToken,
+  INACTIVITY_LOGOUT_MESSAGE,
   isSessionExpired,
+  onAuthInvalidated,
   setToken,
   touchSessionActivity,
 } from '../services/api';
@@ -48,6 +51,10 @@ export function useAuthViewModel() {
     setState(current => ({ ...current, error: null }));
   }, []);
 
+  const logoutForInactivity = useCallback(() => {
+    logout(INACTIVITY_LOGOUT_MESSAGE);
+  }, [logout]);
+
   const refreshUser = useCallback(async (): Promise<ApiUser | null> => {
     try {
       const user = await authApi.me();
@@ -67,34 +74,56 @@ export function useAuthViewModel() {
   }, [logout]);
 
   useEffect(() => {
+    const hadStoredToken = Boolean(getStoredToken());
+    const expiredSession = hadStoredToken && isSessionExpired();
     const token = getToken();
-    if (!token || isSessionExpired()) {
+    if (!token) {
+      if (expiredSession) {
+        logoutForInactivity();
+        return;
+      }
+
       logout();
       return;
     }
 
     void refreshUser();
-  }, [logout, refreshUser]);
+  }, [logout, logoutForInactivity, refreshUser]);
+
+  useEffect(() => {
+    const unsubscribe = onAuthInvalidated((reason) => {
+      if (reason === 'expired') {
+        logoutForInactivity();
+        return;
+      }
+      logout();
+    });
+
+    return unsubscribe;
+  }, [logout, logoutForInactivity]);
 
   useEffect(() => {
     if (!state.isAuthenticated) return;
 
     const endExpiredSession = () => {
       if (isSessionExpired()) {
-        logout('You have been logged out due to inactivity');
+        logoutForInactivity();
       }
     };
 
     const handleActivity = () => {
-      if (!document.hidden) {
-        touchSessionActivity();
+      if (document.hidden) return;
+      if (isSessionExpired()) {
+        logoutForInactivity();
+        return;
       }
+      touchSessionActivity();
     };
 
     const handleFocusOrVisibility = () => {
       if (document.hidden) return;
       if (isSessionExpired()) {
-        logout('You have been logged out due to inactivity');
+        logoutForInactivity();
         return;
       }
       touchSessionActivity();
@@ -128,7 +157,7 @@ export function useAuthViewModel() {
       window.removeEventListener('storage', handleStorage);
       window.clearInterval(intervalId);
     };
-  }, [logout, state.isAuthenticated]);
+  }, [logout, logoutForInactivity, state.isAuthenticated]);
 
   const login = useCallback(async (email: string, password: string): Promise<'admin' | 'user' | null> => {
     setState(current => ({ ...current, isLoading: true, error: null }));

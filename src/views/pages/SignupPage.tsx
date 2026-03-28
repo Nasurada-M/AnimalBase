@@ -14,8 +14,26 @@ import {
   PHILIPPINES_PHONE_PLACEHOLDER,
   sanitizePhilippinePhoneNumber,
 } from '../../utils/philippinePhone';
+import PangasinanLocationInput from '../../components/PangasinanLocationInput';
+import {
+  getPangasinanLocationValidationMessage,
+  isPangasinanLocationValue,
+} from '../../utils/pangasinanLocation';
 
 type SignupStep = 1 | 2 | 3;
+
+const APPROVED_GENERIC_EMAIL_ENDINGS = [
+  '.com',
+  '.edu',
+  '.org',
+  '.net',
+  '.gov',
+  '.mil',
+  '.info',
+  '.io',
+  '.co',
+];
+const COUNTRY_CODE_EMAIL_ENDING_PATTERN = /\.[a-z]{2}$/i;
 
 const STEP_ITEMS: Array<{ step: SignupStep; title: string; subtitle: string }> = [
   { step: 1, title: 'Enter email', subtitle: 'Send verification code' },
@@ -35,6 +53,16 @@ function getPasswordStrength(password: string) {
   if (score === 2) return { label: 'Fair', color: 'bg-amber-400', width: 'w-2/4' };
   if (score === 3) return { label: 'Good', color: 'bg-primary-500', width: 'w-3/4' };
   return { label: 'Strong', color: 'bg-emerald-500', width: 'w-full' };
+}
+
+function hasApprovedEmailEnding(value: string) {
+  const normalizedValue = value.trim().toLowerCase();
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(normalizedValue);
+  if (!isValidEmail) return false;
+
+  const domain = normalizedValue.split('@')[1] || '';
+  return APPROVED_GENERIC_EMAIL_ENDINGS.some(ending => domain.endsWith(ending))
+    || COUNTRY_CODE_EMAIL_ENDING_PATTERN.test(domain);
 }
 
 export default function SignupPage() {
@@ -79,8 +107,6 @@ export default function SignupPage() {
     clearError();
   };
 
-  const validateGmail = (value: string) => /^[^\s@]+@gmail\.com$/i.test(value.trim());
-
   useEffect(() => {
     if (otpExpiresInSeconds <= 0) return undefined;
     const timer = window.setTimeout(() => {
@@ -99,8 +125,8 @@ export default function SignupPage() {
 
   const handleSendCode = async () => {
     resetMessages();
-    if (!validateGmail(email)) {
-      setLocalError('Enter a valid Gmail address before requesting a verification code.');
+    if (!hasApprovedEmailEnding(email)) {
+      setLocalError('Enter a valid email address with an approved ending like .com, .edu, or .ph before requesting a verification code.');
       return;
     }
 
@@ -198,6 +224,10 @@ export default function SignupPage() {
       setLocalError('Address is required.');
       return;
     }
+    if (!isPangasinanLocationValue(address)) {
+      setLocalError(getPangasinanLocationValidationMessage('Address'));
+      return;
+    }
     if (password !== confirm) {
       setLocalError('Passwords do not match.');
       return;
@@ -282,7 +312,7 @@ export default function SignupPage() {
           </div>
 
           <h1 className="font-display text-3xl font-bold text-gray-900 mb-2">Create account</h1>
-          <p className="text-gray-500 mb-8">Verify your Gmail first, then finish creating your account.</p>
+          <p className="text-gray-500 mb-8">Verify your email first, then finish creating your account.</p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
             {STEP_ITEMS.map(item => {
@@ -336,15 +366,15 @@ export default function SignupPage() {
                     <Mail className="w-5 h-5 text-primary-600" />
                   </div>
                   <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">Step 1 - Enter email</h2>
-                  <p className="text-gray-500 text-sm">Enter Gmail, then click Send Verification Code.</p>
+                  <p className="text-gray-500 text-sm">Use any valid email with an approved ending like .com, .edu, or .ph.</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Gmail Address</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
                   <input
                     type="email"
                     className="input-field"
-                    placeholder="yourname@gmail.com"
+                    placeholder="yourname@yahoo.com"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     required
@@ -467,14 +497,13 @@ export default function SignupPage() {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Address</label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="Street, City, Province"
+                  <PangasinanLocationInput
                     value={address}
-                    onChange={e => setAddress(e.target.value)}
+                    onChange={setAddress}
+                    placeholder="Search Pangasinan barangay, city, or municipality"
                     required
                     maxLength={255}
+                    helperText="Choose a location in Pangasinan, Philippines."
                   />
                 </div>
 

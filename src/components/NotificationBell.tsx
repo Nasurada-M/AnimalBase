@@ -7,6 +7,7 @@ import {
   Clock3,
   Eye,
   FileText,
+  PawPrint,
   Search,
   X,
   XCircle,
@@ -31,6 +32,27 @@ const buttonClasses = {
   dashboard: 'relative w-9 h-9 bg-primary-50 rounded-xl flex items-center justify-center text-primary-600 hover:bg-primary-100 transition-colors',
   admin: 'relative w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:bg-primary-50 hover:text-primary-600 transition-colors',
 };
+const NOTIFICATION_ROUTE_BASE = 'https://animalbase.local';
+
+function parseNotificationRoute(route: string | null | undefined) {
+  const normalizedRoute = route?.trim();
+  if (!normalizedRoute) return null;
+
+  try {
+    const parsedRoute = new URL(normalizedRoute, NOTIFICATION_ROUTE_BASE);
+    return {
+      pathname: parsedRoute.pathname,
+      search: parsedRoute.search,
+      fullPath: `${parsedRoute.pathname}${parsedRoute.search}`,
+    };
+  } catch {
+    return {
+      pathname: normalizedRoute,
+      search: '',
+      fullPath: normalizedRoute,
+    };
+  }
+}
 
 function getStorageKey(prefix: string, userId: number, scope: NotificationScope) {
   return `${prefix}:${userId}:${scope}`;
@@ -87,6 +109,20 @@ function formatTimeLabel(createdAt: string) {
 
 function getNotificationMeta(kind: NotificationKind) {
   switch (kind) {
+    case 'new_pet_available':
+      return {
+        Icon: PawPrint,
+        chip: 'Adoption',
+        iconClass: 'text-primary-600',
+        iconBg: 'bg-primary-100',
+      };
+    case 'missing_pet_reported':
+      return {
+        Icon: Search,
+        chip: 'Pet Finder',
+        iconClass: 'text-orange-600',
+        iconBg: 'bg-orange-100',
+      };
     case 'application_approved':
       return {
         Icon: CheckCircle2,
@@ -110,7 +146,7 @@ function getNotificationMeta(kind: NotificationKind) {
       };
     case 'lost_pet_found':
       return {
-        Icon: Search,
+        Icon: CheckCircle2,
         chip: 'Pet Finder',
         iconClass: 'text-primary-600',
         iconBg: 'bg-primary-100',
@@ -130,7 +166,20 @@ function getNotificationTargetRoute(
   notification: ApiNotification,
   scope: NotificationScope
 ) {
+  const directRoute = parseNotificationRoute(notification.route);
+  if (directRoute) {
+    return directRoute.fullPath;
+  }
+
   if (scope === 'admin') {
+    if (notification.kind === 'new_pet_available') {
+      return '/admin/pets';
+    }
+
+    if (notification.kind === 'missing_pet_reported') {
+      return '/admin/lost-pets';
+    }
+
     if (notification.kind === 'application_pending') {
       return '/admin/applications';
     }
@@ -148,6 +197,10 @@ function getNotificationTargetRoute(
   }
 
   if (scope === 'user') {
+    if (notification.kind === 'new_pet_available') {
+      return '/dashboard/pet-adoption';
+    }
+
     if (
       notification.kind === 'application_pending'
       || notification.kind === 'application_approved'
@@ -157,7 +210,8 @@ function getNotificationTargetRoute(
     }
 
     if (
-      notification.kind === 'sighting_reported'
+      notification.kind === 'missing_pet_reported'
+      || notification.kind === 'sighting_reported'
       || notification.kind === 'lost_pet_found'
     ) {
       return '/dashboard/pet-finder';
@@ -174,7 +228,7 @@ export default function NotificationBell({
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { fetchApplications } = usePets();
+  const { fetchApplications, fetchPets } = usePets();
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   const [isOpen, setIsOpen] = useState(false);
@@ -300,7 +354,7 @@ export default function NotificationBell({
 
   useEffect(() => {
     setIsOpen(false);
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -336,20 +390,27 @@ export default function NotificationBell({
 
   const refreshDataForNotificationRoute = (notification: ApiNotification) => {
     const targetRoute = getNotificationTargetRoute(notification, scope);
+    const targetPath = parseNotificationRoute(targetRoute)?.pathname ?? targetRoute;
 
-    if (scope === 'user' && targetRoute === '/dashboard/applications') {
+    if (scope === 'user' && targetPath === '/dashboard/applications') {
       void fetchApplications();
+      return;
+    }
+
+    if (scope === 'user' && targetPath === '/dashboard/pet-adoption') {
+      void fetchPets();
     }
   };
 
   const handleNotificationClick = (notification: ApiNotification) => {
     const targetRoute = getNotificationTargetRoute(notification, scope);
+    const currentRoute = `${location.pathname}${location.search}`;
 
     markAsRead(notification.id);
     refreshDataForNotificationRoute(notification);
     setIsOpen(false);
 
-    if (targetRoute && location.pathname !== targetRoute) {
+    if (targetRoute && currentRoute !== targetRoute) {
       navigate(targetRoute);
     }
   };

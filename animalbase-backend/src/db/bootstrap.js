@@ -103,6 +103,10 @@ async function ensureUserNotificationSchema() {
       `ALTER TABLE users
        ADD COLUMN IF NOT EXISTS new_pet_email_notifications_enabled BOOLEAN NOT NULL DEFAULT TRUE`
     );
+    await client.query(
+      `ALTER TABLE users
+       ADD COLUMN IF NOT EXISTS pet_finder_email_notifications_enabled BOOLEAN NOT NULL DEFAULT TRUE`
+    );
   } finally {
     client.release();
   }

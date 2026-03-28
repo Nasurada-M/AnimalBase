@@ -451,18 +451,21 @@
                 android:textSize="14sp" />
 
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilLastSeenLocation"
                 style="@style/Widget.AnimalBase.AuthInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 app:hintEnabled="false">
 
-                <com.google.android.material.textfield.TextInputEditText
+                <AutoCompleteTextView
                     android:id="@+id/etLastSeenLocation"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Street, landmark, city"
+                    android:hint="Search Pangasinan barangay, city, or municipality"
                     android:minHeight="56dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
                     android:textColor="@color/text_primary"
                     android:textColorHint="@color/secondary" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -476,6 +479,7 @@
                 android:textSize="14sp" />
 
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilLastSeenDate"
                 style="@style/Widget.AnimalBase.AuthInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -637,8 +641,8 @@
                             android:id="@+id/etOwnerPhone"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="+63 9..."
-                            android:inputType="phone"
+                            android:hint="09123456789"
+                            android:inputType="number"
                             android:minHeight="56dp"
                             android:textColor="@color/text_primary"
                             android:textColorHint="@color/secondary" />

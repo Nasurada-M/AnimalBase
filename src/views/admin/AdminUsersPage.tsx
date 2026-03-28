@@ -4,6 +4,11 @@ import ModalPortal from '../../components/ModalPortal';
 import { adminApi, ApiUser } from '../../services/api';
 import UserAvatar from '../../components/UserAvatar';
 import ClearableSearchField from '../../components/ClearableSearchField';
+import PangasinanLocationInput from '../../components/PangasinanLocationInput';
+import {
+  getPangasinanLocationValidationMessage,
+  isPangasinanLocationValue,
+} from '../../utils/pangasinanLocation';
 
 export default function AdminUsersPage() {
   const [users, setUsers]     = useState<ApiUser[]>([]);
@@ -15,6 +20,7 @@ export default function AdminUsersPage() {
   const [newPw, setNewPw]     = useState('');
   const [saving, setSaving]   = useState(false);
   const [msg, setMsg]         = useState('');
+  const [msgType, setMsgType] = useState<'success' | 'error'>('success');
   const editableFields: Array<{ label: string; key: 'fullName' | 'email' | 'phone' | 'address' }> = [
     { label: 'Full Name', key: 'fullName' },
     { label: 'Email', key: 'email' },
@@ -33,13 +39,22 @@ export default function AdminUsersPage() {
 
   const handleUpdate = async () => {
     if (!editUser) return;
+    if (editUser.address?.trim() && !isPangasinanLocationValue(editUser.address)) {
+      setMsgType('error');
+      setMsg(getPangasinanLocationValidationMessage('Address'));
+      return;
+    }
     setSaving(true);
     try {
       const updated = await adminApi.updateUser(editUser.id, editUser);
       setUsers(u => u.map(x => x.id === updated.id ? updated : x));
       setEditUser(null);
+      setMsgType('success');
       setMsg('User updated.');
-    } catch (err: unknown) { setMsg(err instanceof Error ? err.message : 'Error'); }
+    } catch (err: unknown) {
+      setMsgType('error');
+      setMsg(err instanceof Error ? err.message : 'Error');
+    }
     finally { setSaving(false); }
   };
 
@@ -50,8 +65,12 @@ export default function AdminUsersPage() {
       await adminApi.deleteUser(deleteUser.id);
       setUsers(u => u.filter(x => x.id !== deleteUser.id));
       setDeleteUser(null);
+      setMsgType('success');
       setMsg('User deleted.');
-    } catch (err: unknown) { setMsg(err instanceof Error ? err.message : 'Error'); }
+    } catch (err: unknown) {
+      setMsgType('error');
+      setMsg(err instanceof Error ? err.message : 'Error');
+    }
     finally { setSaving(false); }
   };
 
@@ -61,8 +80,12 @@ export default function AdminUsersPage() {
     try {
       await adminApi.resetPassword(resetUser.id, newPw);
       setResetUser(null); setNewPw('');
+      setMsgType('success');
       setMsg('Password reset successfully.');
-    } catch (err: unknown) { setMsg(err instanceof Error ? err.message : 'Error'); }
+    } catch (err: unknown) {
+      setMsgType('error');
+      setMsg(err instanceof Error ? err.message : 'Error');
+    }
     finally { setSaving(false); }
   };
 
@@ -74,7 +97,11 @@ export default function AdminUsersPage() {
   return (
     <div className="p-6 lg:p-8 animate-fade-in">
       {msg && (
-        <div className="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 text-sm flex justify-between items-center">
+        <div className={`mb-4 rounded-xl px-4 py-3 text-sm flex justify-between items-center ${
+          msgType === 'error'
+            ? 'bg-red-50 border border-red-200 text-red-700'
+            : 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+        }`}>
           {msg} <button onClick={() => setMsg('')}><X className="w-4 h-4" /></button>
         </div>
       )}
@@ -206,14 +233,27 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
                 {editableFields.map(({ label, key }) => (
-                  <div key={key}>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1.5">{label}</label>
-                    <input
-                      className="input-field"
-                      value={editUser[key] || ''}
-                      onChange={e => setEditUser({ ...editUser, [key]: e.target.value })}
-                    />
-                  </div>
+                  key === 'address' ? (
+                    <div key={key}>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5">{label}</label>
+                      <PangasinanLocationInput
+                        value={editUser.address || ''}
+                        onChange={(value) => setEditUser({ ...editUser, address: value })}
+                        placeholder="Search Pangasinan barangay, city, or municipality"
+                        maxLength={255}
+                        helperText="Address suggestions are limited to Pangasinan, Philippines."
+                      />
+                    </div>
+                  ) : (
+                    <div key={key}>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5">{label}</label>
+                      <input
+                        className="input-field"
+                        value={editUser[key] || ''}
+                        onChange={e => setEditUser({ ...editUser, [key]: e.target.value })}
+                      />
+                    </div>
+                  )
                 ))}
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5">Role</label>

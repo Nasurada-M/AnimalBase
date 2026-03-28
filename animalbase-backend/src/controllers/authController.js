@@ -2,7 +2,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const pool = require('../db/pool');
+const { resolveStoredAssetUrl } = require('../middleware/upload');
 const { deleteUserAccountById } = require('../utils/accountDeletion');
+const { isPangasinanLocation } = require('../utils/location');
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
@@ -15,13 +17,31 @@ const signPasswordResetToken = (email, userVersion) =>
 
 const SIGNUP_OTP_TTL_MS = 60 * 1000;
 const VERIFIED_SIGNUP_TTL_MS = 10 * 60 * 1000;
-const RESET_OTP_TTL_MS = 10 * 60 * 1000;
+const RESET_OTP_TTL_MS = 60 * 1000;
 const RESET_TOKEN_TTL_SECONDS = 10 * 60;
+const APPROVED_GENERIC_EMAIL_ENDINGS = [
+  '.com',
+  '.edu',
+  '.org',
+  '.net',
+  '.gov',
+  '.mil',
+  '.info',
+  '.io',
+  '.co',
+];
+const COUNTRY_CODE_EMAIL_ENDING_PATTERN = /\.[a-z]{2}$/i;
 
 const normalizeEmail = (email = '') => email.trim().toLowerCase();
 const createOtp = () => String(Math.floor(100000 + Math.random() * 900000));
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(email);
-const isGmail = (email) => /^[^\s@]+@gmail\.com$/i.test(email);
+const hasApprovedEmailEnding = (email) => {
+  if (!isValidEmail(email)) return false;
+  const domain = email.split('@')[1] || '';
+
+  return APPROVED_GENERIC_EMAIL_ENDINGS.some((ending) => domain.endsWith(ending))
+    || COUNTRY_CODE_EMAIL_ENDING_PATTERN.test(domain);
+};
 const escapeHtml = (value = '') =>
   String(value)
     .replace(/&/g, '&amp;')
@@ -135,7 +155,7 @@ const sendPasswordResetOtpEmail = async (email, otp) =>
 const sendNewPetAvailableEmail = async ({ email, fullName, pet }) => {
   const transporter = await getTransporter();
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
-  const appUrl = `${getPublicAppUrl()}/dashboard/home`;
+  const appUrl = `${getPublicAppUrl()}/dashboard/pet-adoption`;
   const safeRecipientName = escapeHtml(fullName || 'AnimalBase member');
   const safePetName = escapeHtml(pet.name);
   const safePetType = escapeHtml(pet.type);
@@ -192,6 +212,66 @@ const sendNewPetAvailableEmail = async ({ email, fullName, pet }) => {
   });
 };
 
+const sendPetFinderAlertEmail = async ({ email, fullName, lostPet }) => {
+  const transporter = await getTransporter();
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const appUrl = `${getPublicAppUrl()}/dashboard/pet-finder`;
+  const safeRecipientName = escapeHtml(fullName || 'AnimalBase member');
+  const safePetName = escapeHtml(lostPet.petName);
+  const safePetType = escapeHtml(lostPet.type);
+  const safeBreed = escapeHtml(lostPet.breed || 'Unknown breed');
+  const safeLocation = escapeHtml(lostPet.lastSeenLocation || 'Pangasinan');
+  const safeDate = escapeHtml(lostPet.lastSeenDate || 'Date not specified');
+
+  await transporter.sendMail({
+    from,
+    to: email,
+    subject: `Pet Finder alert: ${lostPet.petName} was reported missing`,
+    text: [
+      `Hi ${fullName || 'AnimalBase member'},`,
+      '',
+      `A new Pet Finder alert was posted for ${lostPet.petName}.`,
+      `Type: ${lostPet.type}`,
+      `Breed: ${lostPet.breed || 'Unknown breed'}`,
+      `Last seen: ${lostPet.lastSeenLocation || 'Pangasinan'}`,
+      `Date last seen: ${lostPet.lastSeenDate || 'Date not specified'}`,
+      '',
+      `View Pet Finder alerts: ${appUrl}`,
+      '',
+      'You are receiving this because Pet Finder email alerts are enabled in your AnimalBase notification settings.',
+    ].join('\n'),
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #1f2937;">
+        <div style="background: linear-gradient(135deg, #6d28d9, #8b5cf6); border-radius: 20px; padding: 24px; color: white; margin-bottom: 20px;">
+          <h1 style="margin: 0; font-size: 24px;">AnimalBase</h1>
+          <p style="margin: 8px 0 0; opacity: 0.9;">A new Pet Finder alert is live</p>
+        </div>
+        <p style="font-size: 15px; line-height: 1.6;">Hi ${safeRecipientName},</p>
+        <p style="font-size: 15px; line-height: 1.6;">
+          <strong>${safePetName}</strong> has just been reported missing in Pet Finder.
+        </p>
+        <div style="margin: 24px 0; padding: 18px 20px; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 16px;">
+          <div style="font-size: 14px; line-height: 1.8;">
+            <div><strong>Type:</strong> ${safePetType}</div>
+            <div><strong>Breed:</strong> ${safeBreed}</div>
+            <div><strong>Last seen:</strong> ${safeLocation}</div>
+            <div><strong>Date last seen:</strong> ${safeDate}</div>
+          </div>
+        </div>
+        <a
+          href="${appUrl}"
+          style="display: inline-block; background: #7c3aed; color: #ffffff; text-decoration: none; padding: 12px 18px; border-radius: 12px; font-weight: 700;"
+        >
+          Open Pet Finder
+        </a>
+        <p style="margin-top: 24px; font-size: 13px; color: #6b7280;">
+          You are receiving this because Pet Finder email alerts are enabled in Settings &gt; Notifications.
+        </p>
+      </div>
+    `,
+  });
+};
+
 const sendNewPetAvailabilityEmails = async (pet) => {
   try {
     const recipients = await pool.query(
@@ -235,9 +315,52 @@ const sendNewPetAvailabilityEmails = async (pet) => {
   }
 };
 
+const sendPetFinderAlertEmails = async (lostPet) => {
+  try {
+    const recipients = await pool.query(
+      `SELECT full_name, email
+       FROM users
+       WHERE role = 'user'
+         AND email IS NOT NULL
+         AND COALESCE(pet_finder_email_notifications_enabled, TRUE) = TRUE`
+    );
+
+    if (recipients.rows.length === 0) {
+      return { queued: 0, delivered: 0, failed: 0 };
+    }
+
+    const results = await Promise.allSettled(
+      recipients.rows.map((row) =>
+        sendPetFinderAlertEmail({
+          email: row.email,
+          fullName: row.full_name,
+          lostPet,
+        })
+      )
+    );
+
+    const delivered = results.filter((result) => result.status === 'fulfilled').length;
+    const failed = results.length - delivered;
+
+    if (failed > 0) {
+      console.warn(
+        `[notifications] Failed to send ${failed} Pet Finder alert email(s) for missing pet ${lostPet.id}.`
+      );
+    }
+
+    return { queued: results.length, delivered, failed };
+  } catch (err) {
+    console.error(
+      '[notifications] Unable to send Pet Finder alert emails:',
+      err instanceof Error ? err.message : err
+    );
+    return { queued: 0, delivered: 0, failed: 0 };
+  }
+};
+
 const initMailer = async () => {
   await getTransporter();
-  console.log('✅  Gmail SMTP ready');
+  console.log('✅  SMTP ready');
 };
 
 const purgeExpiredVerifications = async () => {
@@ -296,8 +419,10 @@ const sendOtp = async (req, res) => {
     if (!email) {
       return res.status(400).json({ error: 'Email is required.' });
     }
-    if (!isGmail(email)) {
-      return res.status(400).json({ error: 'Please enter a valid Gmail address.' });
+    if (!hasApprovedEmailEnding(email)) {
+      return res.status(400).json({
+        error: 'Please enter a valid email address with an approved ending like .com, .edu, or .ph.',
+      });
     }
 
     const dup = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
@@ -470,8 +595,16 @@ const register = async (req, res) => {
     if (!fullName || !email || !password) {
       return res.status(400).json({ error: 'Full name, email, and password are required.' });
     }
+    if (!hasApprovedEmailEnding(email)) {
+      return res.status(400).json({
+        error: 'Please enter a valid email address with an approved ending like .com, .edu, or .ph.',
+      });
+    }
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+    if (address && !isPangasinanLocation(address)) {
+      return res.status(400).json({ error: 'Address must be in Pangasinan, Philippines.' });
     }
 
     const verified = await getVerification(email);
@@ -491,7 +624,8 @@ const register = async (req, res) => {
       `INSERT INTO users (full_name, email, password, phone, address)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, full_name, email, phone, address, avatar_url, role, joined_at,
-                 new_pet_email_notifications_enabled`,
+                 new_pet_email_notifications_enabled,
+                 pet_finder_email_notifications_enabled`,
       [fullName, email, hashed, phone, address]
     );
 
@@ -508,8 +642,9 @@ const register = async (req, res) => {
         email: user.email,
         phone: user.phone,
         address: user.address,
-        avatarUrl: user.avatar_url,
+        avatarUrl: resolveStoredAssetUrl(req, user.avatar_url),
         newPetEmailNotificationsEnabled: user.new_pet_email_notifications_enabled,
+        petFinderEmailNotificationsEnabled: user.pet_finder_email_notifications_enabled,
         role: user.role,
         joinedAt: user.joined_at,
       },
@@ -556,8 +691,9 @@ const login = async (req, res) => {
         email: user.email,
         phone: user.phone,
         address: user.address,
-        avatarUrl: user.avatar_url,
+        avatarUrl: resolveStoredAssetUrl(req, user.avatar_url),
         newPetEmailNotificationsEnabled: user.new_pet_email_notifications_enabled,
+        petFinderEmailNotificationsEnabled: user.pet_finder_email_notifications_enabled,
         role: user.role,
         joinedAt: user.joined_at,
       },
@@ -638,8 +774,9 @@ const getMe = async (req, res) => {
     email: u.email,
     phone: u.phone,
     address: u.address,
-    avatarUrl: u.avatar_url,
+    avatarUrl: resolveStoredAssetUrl(req, u.avatar_url),
     newPetEmailNotificationsEnabled: u.new_pet_email_notifications_enabled,
+    petFinderEmailNotificationsEnabled: u.pet_finder_email_notifications_enabled,
     role: u.role,
   });
 };
@@ -654,6 +791,10 @@ const updateMe = async (req, res) => {
       req.body,
       'newPetEmailNotificationsEnabled'
     );
+    const hasPetFinderEmailNotificationsEnabled = Object.prototype.hasOwnProperty.call(
+      req.body,
+      'petFinderEmailNotificationsEnabled'
+    );
 
     const fullName = hasFullName ? req.body.fullName : req.user.full_name;
     const phone = hasPhone ? req.body.phone : req.user.phone;
@@ -661,6 +802,9 @@ const updateMe = async (req, res) => {
     const newPetEmailNotificationsEnabled = hasNewPetEmailNotificationsEnabled
       ? req.body.newPetEmailNotificationsEnabled
       : req.user.new_pet_email_notifications_enabled;
+    const petFinderEmailNotificationsEnabled = hasPetFinderEmailNotificationsEnabled
+      ? req.body.petFinderEmailNotificationsEnabled
+      : req.user.pet_finder_email_notifications_enabled;
 
     if (
       hasNewPetEmailNotificationsEnabled &&
@@ -670,25 +814,46 @@ const updateMe = async (req, res) => {
         .status(400)
         .json({ error: 'New pet email notification preference must be true or false.' });
     }
+    if (
+      hasPetFinderEmailNotificationsEnabled &&
+      typeof petFinderEmailNotificationsEnabled !== 'boolean'
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'Pet Finder email notification preference must be true or false.' });
+    }
+    if (address && !isPangasinanLocation(address)) {
+      return res.status(400).json({ error: 'Address must be in Pangasinan, Philippines.' });
+    }
 
     const result = await pool.query(
       `UPDATE users
        SET full_name=$1,
            phone=$2,
            address=$3,
-           new_pet_email_notifications_enabled=$4
-       WHERE id=$5
+           new_pet_email_notifications_enabled=$4,
+           pet_finder_email_notifications_enabled=$5
+       WHERE id=$6
        RETURNING id, full_name, email, phone, address, avatar_url, role,
-                 new_pet_email_notifications_enabled`,
-      [fullName, phone, address, newPetEmailNotificationsEnabled, req.user.id]
+                 new_pet_email_notifications_enabled,
+                 pet_finder_email_notifications_enabled`,
+      [
+        fullName,
+        phone,
+        address,
+        newPetEmailNotificationsEnabled,
+        petFinderEmailNotificationsEnabled,
+        req.user.id,
+      ]
     );
     const u = result.rows[0];
     res.json({
       id: u.id, fullName: u.full_name, email: u.email,
       phone: u.phone,
       address: u.address,
-      avatarUrl: u.avatar_url,
+      avatarUrl: resolveStoredAssetUrl(req, u.avatar_url),
       newPetEmailNotificationsEnabled: u.new_pet_email_notifications_enabled,
+      petFinderEmailNotificationsEnabled: u.pet_finder_email_notifications_enabled,
       role: u.role,
     });
   } catch (err) {
@@ -764,4 +929,5 @@ module.exports = {
   changePassword,
   deleteMe,
   sendNewPetAvailabilityEmails,
+  sendPetFinderAlertEmails,
 };

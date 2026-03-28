@@ -67,16 +67,23 @@
         </LinearLayout>
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilSearch"
+            style="@style/Widget.AnimalBase.SearchInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:hint="Search by name, breed, type"
-            app:startIconDrawable="@android:drawable/ic_menu_search">
+            app:endIconCheckable="false"
+            app:endIconContentDescription="@string/clear_search"
+            app:endIconDrawable="@drawable/ic_close"
+            app:endIconMode="custom"
+            app:startIconDrawable="@drawable/ic_search">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etSearch"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:maxLines="1"
                 android:inputType="text" />
         </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>

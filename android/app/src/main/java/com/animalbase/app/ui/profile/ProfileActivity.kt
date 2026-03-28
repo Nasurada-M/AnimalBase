@@ -21,7 +21,6 @@ import com.animalbase.app.ui.applications.ApplicationCardAdapter
 import com.animalbase.app.ui.auth.LoginActivity
 import com.animalbase.app.ui.auth.SplashActivity
 import com.animalbase.app.ui.base.SessionAwareActivity
-import com.animalbase.app.ui.notifications.NotificationsActivity
 import com.animalbase.app.utils.ImageLoader
 import com.animalbase.app.utils.NotificationPollingWorker
 import com.animalbase.app.utils.formatDateTime
@@ -31,6 +30,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
+import java.io.IOException
 
 class ProfileActivity : SessionAwareActivity() {
 
@@ -38,6 +38,7 @@ class ProfileActivity : SessionAwareActivity() {
     private val api by lazy { RetrofitClient.getApiService(this) }
     private val historyAdapter by lazy { ApplicationCardAdapter(::showApplicationDetails) }
     private var activeSection: String = "profile"
+    private var isAccountSectionExpanded: Boolean = false
     private var hasLoadedApplications: Boolean = false
     private var hasResumedOnce: Boolean = false
 
@@ -45,7 +46,12 @@ class ProfileActivity : SessionAwareActivity() {
         ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
-            cropPhotoLauncher.launch(CropProfilePhotoActivity.createIntent(this, it))
+            val cachedSourceFile = copyPickedPhotoToCache(it)
+            if (cachedSourceFile == null) {
+                showToast("Unable to open the selected image")
+                return@let
+            }
+            cropPhotoLauncher.launch(CropProfilePhotoActivity.createIntent(this, cachedSourceFile))
         }
     }
 
@@ -84,6 +90,7 @@ class ProfileActivity : SessionAwareActivity() {
         setupTabs()
         setupClickListeners()
         renderUser(session.getUser())
+        renderAccountSection()
         showSection(activeSection)
     }
 
@@ -116,6 +123,9 @@ class ProfileActivity : SessionAwareActivity() {
         binding.itemEditProfile.setOnClickListener {
             startActivity(Intent(this, EditProfileActivity::class.java))
         }
+        binding.itemAccount.setOnClickListener {
+            toggleAccountSection()
+        }
         binding.itemChangePassword.setOnClickListener {
             startActivity(Intent(this, ChangePasswordActivity::class.java))
         }
@@ -123,11 +133,23 @@ class ProfileActivity : SessionAwareActivity() {
             startActivity(Intent(this, MyReportsActivity::class.java))
         }
         binding.itemNotifications.setOnClickListener {
-            startActivity(Intent(this, NotificationsActivity::class.java))
+            startActivity(Intent(this, NotificationPreferencesActivity::class.java))
+        }
+        binding.itemPrivacy.setOnClickListener {
+            startActivity(Intent(this, PrivacySettingsActivity::class.java))
+        }
+        binding.itemHelpSupport.setOnClickListener {
+            startActivity(Intent(this, HelpSupportActivity::class.java))
+        }
+        binding.itemAboutApp.setOnClickListener {
+            startActivity(Intent(this, AboutAppActivity::class.java))
+        }
+        binding.itemLegalPolicies.setOnClickListener {
+            startActivity(Intent(this, LegalPoliciesActivity::class.java))
         }
 
         binding.btnLogout.setOnClickListener {
-            navigateToLogin()
+            showLogoutPrompt()
         }
         binding.btnDeleteAccount.setOnClickListener {
             showDeleteAccountPrompt()
@@ -158,6 +180,23 @@ class ProfileActivity : SessionAwareActivity() {
         if (section == "history") {
             loadApplications()
         }
+    }
+
+    private fun toggleAccountSection() {
+        isAccountSectionExpanded = !isAccountSectionExpanded
+        renderAccountSection()
+    }
+
+    private fun renderAccountSection() {
+        binding.layoutAccountSection.visibility = if (isAccountSectionExpanded) View.VISIBLE else View.GONE
+        binding.ivAccountChevron.rotation = if (isAccountSectionExpanded) 90f else 0f
+        binding.ivAccountChevron.contentDescription = getString(
+            if (isAccountSectionExpanded) {
+                R.string.collapse_account_section
+            } else {
+                R.string.expand_account_section
+            }
+        )
     }
 
     private fun renderUser(user: User?) {
@@ -253,6 +292,18 @@ class ProfileActivity : SessionAwareActivity() {
         }
     }
 
+    private fun copyPickedPhotoToCache(sourceUri: android.net.Uri): File? {
+        return runCatching {
+            val outputFile = File.createTempFile("profile_source_", ".tmp", cacheDir)
+            contentResolver.openInputStream(sourceUri)?.use { input ->
+                outputFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            } ?: throw IOException("Unable to read the selected image")
+            outputFile
+        }.getOrNull()
+    }
+
     private fun showDeleteAccountPrompt() {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.delete_account_prompt))
@@ -260,6 +311,17 @@ class ProfileActivity : SessionAwareActivity() {
             .setNegativeButton(getString(R.string.cancel), null)
             .setPositiveButton(getString(R.string.confirm)) { _, _ ->
                 showDeleteAccountFinalPrompt()
+            }
+            .show()
+    }
+
+    private fun showLogoutPrompt() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.logout))
+            .setMessage(getString(R.string.logout_prompt_message))
+            .setNegativeButton(getString(R.string.cancel), null)
+            .setPositiveButton(getString(R.string.logout)) { _, _ ->
+                navigateToLogin()
             }
             .show()
     }

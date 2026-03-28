@@ -3,15 +3,30 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const TOKEN_KEY = 'ab_token';
 const LAST_ACTIVITY_KEY = 'ab_last_activity_at';
 export const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
+export const INACTIVITY_LOGOUT_MESSAGE = 'You have been logged out due to inactivity.';
+type AuthInvalidationReason = 'expired' | 'unauthorized';
+type AuthInvalidationListener = (reason: AuthInvalidationReason) => void;
+const authInvalidationListeners = new Set<AuthInvalidationListener>();
+
+const notifyAuthInvalidated = (reason: AuthInvalidationReason) => {
+  authInvalidationListeners.forEach((listener) => listener(reason));
+};
 
 export const getLastActivityAt = () => Number(localStorage.getItem(LAST_ACTIVITY_KEY) ?? '0');
+export const getStoredToken = () => localStorage.getItem(TOKEN_KEY);
+export const onAuthInvalidated = (listener: AuthInvalidationListener) => {
+  authInvalidationListeners.add(listener);
+  return () => {
+    authInvalidationListeners.delete(listener);
+  };
+};
 
 export const touchSessionActivity = (timestamp = Date.now()) => {
   localStorage.setItem(LAST_ACTIVITY_KEY, String(timestamp));
 };
 
 export const isSessionExpired = (now = Date.now()) => {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = getStoredToken();
   if (!token) return false;
 
   const lastActivityAt = getLastActivityAt();
@@ -20,12 +35,13 @@ export const isSessionExpired = (now = Date.now()) => {
 };
 
 export const getToken = () => {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = getStoredToken();
   if (!token) return null;
 
   const lastActivityAt = getLastActivityAt();
   if (lastActivityAt && isSessionExpired()) {
     clearToken();
+    notifyAuthInvalidated('expired');
     return null;
   }
 
@@ -49,14 +65,28 @@ export const clearToken = () => {
 async function request<T>(method: string, path: string, body?: unknown, auth = true): Promise<T> {
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
   const headers: Record<string, string> = isFormData ? {} : { 'Content-Type': 'application/json' };
-  if (auth) { const t = getToken(); if (t) headers['Authorization'] = `Bearer ${t}`; }
+  const hadStoredToken = auth ? Boolean(getStoredToken()) : false;
+  if (auth) {
+    const t = getToken();
+    if (t) {
+      headers['Authorization'] = `Bearer ${t}`;
+    } else if (hadStoredToken) {
+      throw new Error(INACTIVITY_LOGOUT_MESSAGE);
+    }
+  }
   const res  = await fetch(`${BASE_URL}${path}`, {
     method,
     headers,
     body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Request failed');
+  if (!res.ok) {
+    if (auth && (res.status === 401 || res.status === 403)) {
+      clearToken();
+      notifyAuthInvalidated('unauthorized');
+    }
+    throw new Error(data.error || 'Request failed');
+  }
   return data as T;
 }
 
@@ -103,6 +133,14 @@ export const notificationApi = {
     api.get<ApiNotificationsResponse>(`/notifications?scope=${encodeURIComponent(scope)}`),
 };
 
+export const locationApi = {
+  searchPangasinan: (query: string) =>
+    api.get<ApiLocationSuggestion[]>(
+      `/locations/pangasinan?query=${encodeURIComponent(query)}`,
+      false
+    ),
+};
+
 export const petsApi = {
   getAll: (params?: { type?: string; search?: string; status?: string }) => {
     const qs = new URLSearchParams();
@@ -146,8 +184,8 @@ export const adminApi = {
     const qs = params ? new URLSearchParams(params).toString() : '';
     return api.get<ApiPet[]>(`/admin/pets${qs ? `?${qs}` : ''}`);
   },
-  createPet: (data: Partial<ApiPet>) => api.post<ApiPet>('/admin/pets', data),
-  updatePet: (id: number, data: Partial<ApiPet>) => api.put<ApiPet>(`/admin/pets/${id}`, data),
+  createPet: (data: Partial<ApiPet> | FormData) => api.post<ApiPet>('/admin/pets', data),
+  updatePet: (id: number, data: Partial<ApiPet> | FormData) => api.put<ApiPet>(`/admin/pets/${id}`, data),
   deletePet: (id: number) => api.delete<{ message: string }>(`/admin/pets/${id}`),
 
   getApplications: (params?: Record<string, string>) => {
@@ -179,6 +217,7 @@ export const adminApi = {
 export interface ApiUser {
   id: number; fullName: string; email: string; phone?: string;
   address?: string; avatarUrl?: string | null; newPetEmailNotificationsEnabled?: boolean;
+  petFinderEmailNotificationsEnabled?: boolean;
   role: 'user' | 'admin'; joinedAt?: string;
 }
 export interface ApiPhotoUploadResponse {
@@ -206,6 +245,8 @@ export type NotificationKind =
   | 'application_pending'
   | 'application_approved'
   | 'application_rejected'
+  | 'new_pet_available'
+  | 'missing_pet_reported'
   | 'sighting_reported'
   | 'lost_pet_found';
 export interface ApiNotification {
@@ -219,6 +260,10 @@ export interface ApiNotification {
 export interface ApiNotificationsResponse {
   scope: NotificationScope;
   notifications: ApiNotification[];
+}
+export interface ApiLocationSuggestion {
+  label: string;
+  kind?: string;
 }
 export interface ApiPet {
   id: number; name: string; type: string; breed: string; gender: string; age: string;

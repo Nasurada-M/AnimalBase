@@ -61,6 +61,21 @@
         <item name="boxCornerRadiusBottomEnd">18dp</item>
     </style>
 
+    <style name="Widget.AnimalBase.SearchInput" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundMode">outline</item>
+        <item name="boxBackgroundColor">@color/surface</item>
+        <item name="boxStrokeColor">@color/divider</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxStrokeWidthFocused">2dp</item>
+        <item name="hintTextColor">@color/text_secondary</item>
+        <item name="startIconTint">@color/text_secondary</item>
+        <item name="endIconTint">@color/text_secondary</item>
+        <item name="boxCornerRadiusTopStart">20dp</item>
+        <item name="boxCornerRadiusTopEnd">20dp</item>
+        <item name="boxCornerRadiusBottomStart">20dp</item>
+        <item name="boxCornerRadiusBottomEnd">20dp</item>
+    </style>
+
     <style name="Widget.AnimalBase.CardView" parent="Widget.MaterialComponents.CardView">
         <item name="cardCornerRadius">24dp</item>
         <item name="cardElevation">3dp</item>

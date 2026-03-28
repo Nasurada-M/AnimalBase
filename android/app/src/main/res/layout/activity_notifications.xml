@@ -17,11 +17,6 @@
             style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:text="Mark all read" android:textColor="@color/primary" android:textSize="12sp"/>
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnClearAllRead"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="Clear all read" android:textColor="@color/text_secondary" android:textSize="12sp"/>
     </LinearLayout>
     <RelativeLayout android:layout_width="match_parent" android:layout_height="match_parent">
         <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvNotifications"

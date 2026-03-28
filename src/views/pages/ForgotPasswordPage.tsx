@@ -22,6 +22,7 @@ export default function ForgotPasswordPage() {
   const [infoMessage, setInfoMessage] = useState('');
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [otpExpiresInSeconds, setOtpExpiresInSeconds] = useState(0);
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   const otp = otpDigits.join('');
@@ -29,6 +30,14 @@ export default function ForgotPasswordPage() {
   useEffect(() => {
     clearPasswordResetSession();
   }, []);
+
+  useEffect(() => {
+    if (otpExpiresInSeconds <= 0) return undefined;
+    const timer = window.setTimeout(() => {
+      setOtpExpiresInSeconds((seconds) => Math.max(seconds - 1, 0));
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [otpExpiresInSeconds]);
 
   const clearNotices = () => {
     setLocalError('');
@@ -49,6 +58,7 @@ export default function ForgotPasswordPage() {
       const response = await authApi.sendResetOtp(email.trim());
       setInfoMessage(response.message);
       setOtpDigits(['', '', '', '', '', '']);
+      setOtpExpiresInSeconds(response.expiresInSeconds || 60);
       setStep(2);
       setTimeout(() => otpRefs.current[0]?.focus(), 0);
     } catch (err) {
@@ -102,10 +112,15 @@ export default function ForgotPasswordPage() {
       const normalizedEmail = email.trim().toLowerCase();
       const response = await authApi.verifyResetOtp(normalizedEmail, otp);
       setPasswordResetSession(response.resetToken, normalizedEmail);
+      setOtpExpiresInSeconds(0);
       navigate('/reset-password', { replace: true });
     } catch (err) {
       clearPasswordResetSession();
-      setLocalError(err instanceof Error ? err.message : 'Failed to verify the OTP.');
+      const message = err instanceof Error ? err.message : 'Failed to verify the OTP.';
+      if (/expired/i.test(message)) {
+        setOtpExpiresInSeconds(0);
+      }
+      setLocalError(message);
     } finally {
       setIsVerifyingCode(false);
     }
@@ -292,9 +307,20 @@ export default function ForgotPasswordPage() {
                   </div>
                 </div>
 
+                <p className="text-center text-sm text-gray-500">
+                  {otpExpiresInSeconds > 0
+                    ? `Code expires in ${otpExpiresInSeconds}s`
+                    : 'Code expired. Request a new code to continue.'}
+                </p>
+
                 <div className="flex gap-3">
-                  <button type="button" onClick={handleSendCode} disabled={isSendingCode} className="btn-secondary flex-1 py-3">
-                    Resend OTP
+                  <button
+                    type="button"
+                    onClick={handleSendCode}
+                    disabled={isSendingCode || otpExpiresInSeconds > 0}
+                    className="btn-secondary flex-1 py-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {otpExpiresInSeconds > 0 ? `Resend in ${otpExpiresInSeconds}s` : 'Resend OTP'}
                   </button>
                   <button type="button" onClick={handleVerifyCode} disabled={isVerifyingCode} className="btn-primary flex-1 py-3 flex items-center justify-center gap-2 disabled:opacity-60">
                     {isVerifyingCode ? <><Loader2 className="w-4 h-4 animate-spin" /> Verifying...</> : 'Verify OTP'}

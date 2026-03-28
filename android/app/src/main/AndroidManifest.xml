@@ -45,7 +45,10 @@
         </activity>
 
         <activity android:name=".ui.auth.RegisterActivity"       android:exported="false"/>
+        <activity android:name=".ui.auth.ForgotPasswordActivity" android:exported="false"/>
+        <activity android:name=".ui.auth.ResetPasswordActivity"  android:exported="false"/>
         <activity android:name=".ui.home.MainActivity"           android:exported="false"/>
+        <activity android:name=".ui.common.ImagePreviewActivity" android:exported="false"/>
         <activity android:name=".ui.adoption.PetDetailActivity"  android:exported="false"/>
         <activity android:name=".ui.adoption.AdoptionFormActivity" android:exported="false"/>
         <activity android:name=".ui.missing.MissingPetDetailActivity" android:exported="false"/>
@@ -55,7 +58,12 @@
         <activity android:name=".ui.profile.ProfileActivity"    android:exported="false" android:launchMode="singleTop"/>
         <activity android:name=".ui.profile.CropProfilePhotoActivity" android:exported="false"/>
         <activity android:name=".ui.profile.EditProfileActivity" android:exported="false"/>
+        <activity android:name=".ui.profile.NotificationPreferencesActivity" android:exported="false"/>
+        <activity android:name=".ui.profile.PrivacySettingsActivity" android:exported="false"/>
         <activity android:name=".ui.profile.ChangePasswordActivity" android:exported="false"/>
+        <activity android:name=".ui.profile.HelpSupportActivity" android:exported="false"/>
+        <activity android:name=".ui.profile.AboutAppActivity" android:exported="false"/>
+        <activity android:name=".ui.profile.LegalPoliciesActivity" android:exported="false"/>
         <activity android:name=".ui.profile.MyApplicationsActivity" android:exported="false"/>
         <activity android:name=".ui.profile.MyReportsActivity"  android:exported="false"/>
         <activity android:name=".ui.notifications.NotificationsActivity" android:exported="false"/>

@@ -1,6 +1,8 @@
 package com.animalbase.app.utils
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.animalbase.app.api.RetrofitClient
 import com.google.gson.Gson
@@ -12,97 +14,144 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import java.util.concurrent.TimeUnit
 
-/**
- * WebSocketManager — persistent WebSocket connection to the backend.
- *
- * Replaces Firebase Cloud Messaging for real-time notification delivery.
- * The backend (websocket.js) pushes a JSON frame whenever a new notification
- * is created for this user. We decode it and show a local Android notification.
- *
- * Connection URL:
- *   ws://10.0.2.2:3000/ws?token=JWT       (emulator)
- *   ws://YOUR_LAN_IP:3000/ws?token=JWT    (physical device)
- *
- * ======================================================
- * To change the WS URL:
- *   app/build.gradle → buildConfigField "String", "WS_URL", '"ws://..."'
- * ======================================================
- *
- * Lifecycle:
- *   connect()    — call from MainActivity.onStart()
- *   disconnect() — call from MainActivity.onStop()
- *   The manager auto-reconnects on failure (exponential back-off, max 60 s).
- */
 class WebSocketManager(private val context: Context) {
 
-    private val TAG = "AnimalBase-WS"
+    private val tag = "AnimalBase-WS"
     private val gson = Gson()
+    private val sessionManager = SessionManager(context)
+    private val notificationStore = NotificationStateStore(context)
+    private val mainHandler = Handler(Looper.getMainLooper())
     private var webSocket: WebSocket? = null
     private var isConnected = false
-    private var reconnectDelay = 2_000L   // starts at 2 s, doubles up to 60 s
+    private var isConnecting = false
+    private var shouldReconnect = false
+    private var reconnectDelay = 2_000L
+    private var reconnectRunnable: Runnable? = null
 
     private val client = OkHttpClient.Builder()
         .pingInterval(25, TimeUnit.SECONDS)
         .connectTimeout(10, TimeUnit.SECONDS)
         .build()
 
-    /** Open the WebSocket connection using the stored JWT. */
     fun connect() {
-        val token = SessionManager(context).getToken() ?: return
-        // ← WS_URL defined in build.gradle
-        val url = "${RetrofitClient.getWebSocketUrl(context)}?token=$token"
-        val request = Request.Builder().url(url).build()
+        val token = sessionManager.getToken() ?: return
+        shouldReconnect = true
+        cancelScheduledReconnect()
+
+        if (isConnected || isConnecting) {
+            return
+        }
+
+        val url = RetrofitClient.getWebSocketUrl(context)
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer $token")
+            .build()
+
+        isConnecting = true
         webSocket = client.newWebSocket(request, listener)
-        Log.d(TAG, "Connecting to $url")
+        Log.d(tag, "Connecting to $url")
     }
 
-    /** Close the WebSocket cleanly. */
     fun disconnect() {
+        shouldReconnect = false
+        cancelScheduledReconnect()
+        isConnecting = false
         webSocket?.close(1000, "App moved to background")
         webSocket = null
         isConnected = false
-        Log.d(TAG, "Disconnected")
+        Log.d(tag, "Disconnected")
     }
 
     private val listener = object : WebSocketListener() {
         override fun onOpen(ws: WebSocket, response: Response) {
+            isConnecting = false
             isConnected = true
             reconnectDelay = 2_000L
-            Log.d(TAG, "Connection opened")
+            Log.d(tag, "Connection opened")
         }
 
         override fun onMessage(ws: WebSocket, text: String) {
-            Log.d(TAG, "Message: $text")
+            Log.d(tag, "Message: $text")
+
             try {
                 val json = gson.fromJson(text, JsonObject::class.java)
-                val type = json.get("type")?.asString ?: return
-                if (type == "notification") {
-                    val title   = json.get("title")?.asString   ?: "AnimalBase"
-                    val message = json.get("message")?.asString ?: ""
-                    // Post a local notification — no FCM required
-                    NotificationHelper.show(context, title, message)
+                when (json.get("type")?.asString) {
+                    "notification" -> handleNotificationMessage(json)
+                    "connected" -> Log.d(tag, "WebSocket ready")
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to parse message: ${e.message}")
+                Log.w(tag, "Failed to parse message: ${e.message}")
             }
         }
 
         override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
+            isConnecting = false
             isConnected = false
-            Log.w(TAG, "Failure: ${t.message} — reconnecting in ${reconnectDelay / 1000}s")
-            scheduleReconnect()
+            webSocket = null
+            Log.w(tag, "Failure: ${t.message}; reconnecting in ${reconnectDelay / 1000}s")
+            if (shouldReconnect) {
+                scheduleReconnect()
+            }
         }
 
         override fun onClosed(ws: WebSocket, code: Int, reason: String) {
+            isConnecting = false
             isConnected = false
-            Log.d(TAG, "Closed: $code $reason")
+            webSocket = null
+            Log.d(tag, "Closed: $code $reason")
+            if (shouldReconnect && code != 1000) {
+                scheduleReconnect()
+            }
         }
     }
 
+    private fun handleNotificationMessage(messageJson: JsonObject) {
+        val payload = messageJson.getAsJsonObject("notification") ?: messageJson
+        val notificationId = payload.get("id")?.asString ?: return
+        val kind = payload.get("kind")?.asString ?: return
+        val title = payload.get("title")?.asString ?: "AnimalBase"
+        val message = payload.get("message")?.asString ?: ""
+        val route = payload.get("route")?.asString
+        val userId = sessionManager.getUser()?.effectiveUserId ?: return
+
+        if (!notificationStore.shouldShowSystemNotification(userId, notificationId, kind)) {
+            return
+        }
+
+        if (notificationStore.isRead(userId, notificationId)) {
+            notificationStore.markAsDelivered(userId, notificationId)
+            return
+        }
+
+        NotificationHelper.show(
+            context,
+            title,
+            message,
+            notificationId,
+            route
+        )
+        notificationStore.markAsDelivered(userId, notificationId)
+    }
+
     private fun scheduleReconnect() {
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            if (!isConnected) connect()
-        }, reconnectDelay)
+        if (!shouldReconnect) {
+            return
+        }
+
+        cancelScheduledReconnect()
+        reconnectRunnable = Runnable {
+            reconnectRunnable = null
+            if (shouldReconnect && !isConnected && !isConnecting) {
+                connect()
+            }
+        }
+        mainHandler.postDelayed(reconnectRunnable!!, reconnectDelay)
         reconnectDelay = minOf(reconnectDelay * 2, 60_000L)
+    }
+
+    private fun cancelScheduledReconnect() {
+        reconnectRunnable?.let(mainHandler::removeCallbacks)
+        reconnectRunnable = null
     }
 }

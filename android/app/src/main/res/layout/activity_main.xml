@@ -63,7 +63,7 @@
                 android:id="@+id/ivNavAdoption"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_adopt"
+                android:src="@drawable/ic_paw"
                 app:tint="@color/nav_bar_unselected" />
 
             <TextView
@@ -119,7 +119,7 @@
                 android:id="@+id/ivNavApplications"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_book"
+                android:src="@drawable/ic_file_text"
                 app:tint="@color/nav_bar_unselected" />
 
             <TextView

@@ -23,8 +23,22 @@ interface ApiService {
     @POST("api/auth/forgot-password")
     suspend fun forgotPassword(@Body request: ForgotPasswordRequest): Response<ApiResponse>
 
+    @POST("api/auth/send-reset-otp")
+    suspend fun sendResetOtp(@Body request: SendOtpRequest): Response<OtpResponse>
+
+    @POST("api/auth/verify-reset-otp")
+    suspend fun verifyResetOtp(@Body request: VerifyOtpRequest): Response<VerifyResetOtpResponse>
+
+    @POST("api/auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest): Response<ApiResponse>
+
     @GET("api/auth/me")
     suspend fun getProfile(): Response<User>
+
+    @GET("api/locations/pangasinan")
+    suspend fun searchPangasinanLocations(
+        @Query("query") query: String
+    ): Response<List<LocationSuggestion>>
 
     @PUT("api/auth/me")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<User>

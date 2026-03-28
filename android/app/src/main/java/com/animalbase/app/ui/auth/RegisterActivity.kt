@@ -6,7 +6,6 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.text.Editable
-import android.text.InputFilter
 import android.text.InputType
 import android.text.TextWatcher
 import android.view.KeyEvent
@@ -28,7 +27,10 @@ import com.animalbase.app.utils.PhoneRegionOption
 import com.animalbase.app.utils.RegionalPhoneUtils
 import com.animalbase.app.utils.SessionManager
 import com.animalbase.app.utils.ValidationUtils
+import com.animalbase.app.utils.bindPangasinanLocationAutocomplete
 import com.animalbase.app.utils.gone
+import com.animalbase.app.utils.isPangasinanLocation
+import com.animalbase.app.utils.pangasinanLocationValidationMessage
 import com.animalbase.app.utils.showToast
 import com.animalbase.app.utils.visible
 import kotlinx.coroutines.launch
@@ -40,6 +42,7 @@ class RegisterActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityRegisterBinding
     private val session by lazy { SessionManager(this) }
+    private val api by lazy { RetrofitClient.getApiService(this) }
     private val otpInputs by lazy {
         listOf(binding.etOtp1, binding.etOtp2, binding.etOtp3, binding.etOtp4, binding.etOtp5, binding.etOtp6)
     }
@@ -56,6 +59,7 @@ class RegisterActivity : AppCompatActivity() {
         setupOtpInputs()
         setupPasswordStrength()
         setupPhoneRegionDropdown()
+        bindPangasinanLocationAutocomplete(binding.etAddress, binding.tilAddress, lifecycleScope, api)
         setupClicks()
         goToStep(1)
     }
@@ -118,6 +122,7 @@ class RegisterActivity : AppCompatActivity() {
             ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, RegionalPhoneUtils.regions)
         )
         binding.acPhoneRegion.setText(selectedPhoneRegion.toString(), false)
+        RegionalPhoneUtils.bindLocalPhoneInput(binding.etPhone) { selectedPhoneRegion }
         applyPhoneRegion(selectedPhoneRegion, clearNumber = false)
         binding.acPhoneRegion.setOnItemClickListener { parent, _, position, _ ->
             val region = parent.getItemAtPosition(position) as? PhoneRegionOption ?: return@setOnItemClickListener
@@ -127,7 +132,6 @@ class RegisterActivity : AppCompatActivity() {
 
     private fun applyPhoneRegion(region: PhoneRegionOption, clearNumber: Boolean = false) {
         selectedPhoneRegion = region
-        binding.etPhone.filters = arrayOf(InputFilter.LengthFilter(region.maxLocalDigits))
         binding.etPhone.hint = region.placeholder
         binding.tilPhone.helperText =
             "Local number only • up to ${region.maxLocalDigits} digits"
@@ -170,8 +174,9 @@ class RegisterActivity : AppCompatActivity() {
         clearFieldErrors()
         clearMessages()
 
-        if (!email.endsWith("@gmail.com") || !ValidationUtils.isValidEmail(email)) {
-            binding.tilEmail.error = "Only @gmail.com addresses are accepted."
+        if (!ValidationUtils.hasApprovedEmailEnding(email)) {
+            binding.tilEmail.error =
+                "Use a valid email address with an approved ending like .com, .edu, or .ph."
             return
         }
 
@@ -186,8 +191,8 @@ class RegisterActivity : AppCompatActivity() {
                     binding.tvStep2Subtitle.text = "A 6-digit code was sent to $email. Enter it below. It expires in 1 minute."
                     clearOtpInputs()
                     showSuccess(
-                        if (resend) "New code sent to your Gmail."
-                        else result.message ?: "Verification code sent! Check your Gmail inbox."
+                        if (resend) "New code sent to your email."
+                        else result.message ?: "Verification code sent! Check your email inbox."
                     )
                     startResendTimer(result.expiresInSeconds ?: 60)
                     goToStep(2)
@@ -273,6 +278,10 @@ class RegisterActivity : AppCompatActivity() {
         }
         if (address.isBlank()) {
             binding.tilAddress.error = "Address is required."
+            return
+        }
+        if (!isPangasinanLocation(address)) {
+            binding.tilAddress.error = pangasinanLocationValidationMessage("Address")
             return
         }
         if (password.length < 6) {

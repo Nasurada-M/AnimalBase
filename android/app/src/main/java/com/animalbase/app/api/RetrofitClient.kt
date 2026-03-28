@@ -38,6 +38,8 @@ object RetrofitClient {
 
     fun getDefaultBaseUrl(): String = normalizeConfiguredBaseUrl(BuildConfig.CONFIGURED_BACKEND_URL)
 
+    fun getApiRootUrl(context: Context): String = normalizeApiRootUrl(getBaseUrl(context))
+
     fun saveBaseUrl(context: Context, url: String) {
         prefs(context).edit()
             .putString(KEY_API_BASE_URL, normalizeConfiguredBaseUrl(url))

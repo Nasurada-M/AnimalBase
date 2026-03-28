@@ -58,16 +58,6 @@
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/btnPopoverClearAllRead"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="18dp"
-                android:text="Clear all read"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-
-            <TextView
                 android:id="@+id/btnPopoverViewAll"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

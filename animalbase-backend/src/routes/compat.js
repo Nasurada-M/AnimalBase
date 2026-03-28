@@ -7,6 +7,13 @@ const pool = require('../db/pool');
 const { authenticate } = require('../middleware/auth');
 const { formatLostPet } = require('../controllers/lostPetController');
 const { formatApp } = require('../controllers/applicationController');
+const { sendPetFinderAlertEmails } = require('../controllers/authController');
+const {
+  buildUploadedFilePath,
+  buildUploadedFileUrl,
+  normalizeStoredAssetUrl,
+  resolveStoredAssetUrl,
+} = require('../middleware/upload');
 
 const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
 fs.mkdirSync(uploadsDir, { recursive: true });
@@ -21,13 +28,22 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-const formatUser = (user) => ({
+const queuePetFinderAlertEmails = (lostPet) => {
+  sendPetFinderAlertEmails(lostPet).catch((err) => {
+    console.error(
+      '[notifications] Failed to queue Pet Finder alert emails from compat route:',
+      err instanceof Error ? err.message : err
+    );
+  });
+};
+
+const formatUser = (req, user) => ({
   id: user.id,
   fullName: user.full_name || user.fullName,
   email: user.email,
   phone: user.phone || null,
   address: user.address || null,
-  avatarUrl: user.avatar_url || user.avatarUrl || null,
+  avatarUrl: resolveStoredAssetUrl(req, user.avatar_url || user.avatarUrl || null),
   role: user.role || 'user',
   joinedAt: user.joined_at || user.joinedAt || null,
   createdAt: user.created_at || user.createdAt || null,
@@ -60,7 +76,7 @@ router.post('/auth/forgot-password', (_req, res) => {
 });
 
 router.get('/users/profile', authenticate, (req, res) => {
-  res.json({ success: true, user: formatUser(req.user) });
+  res.json({ success: true, user: formatUser(req, req.user) });
 });
 
 router.put('/users/profile', authenticate, async (req, res) => {
@@ -80,7 +96,7 @@ router.put('/users/profile', authenticate, async (req, res) => {
     res.json({
       success: true,
       message: 'Profile updated.',
-      user: formatUser(result.rows[0]),
+      user: formatUser(req, result.rows[0]),
     });
   } catch (err) {
     console.error('compat update profile error:', err);
@@ -94,13 +110,13 @@ router.post('/users/profile-photo', authenticate, upload.single('profile_photo')
       return res.status(400).json({ success: false, message: 'No photo uploaded.' });
     }
 
-    const photoUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-    await pool.query('UPDATE users SET avatar_url = $1 WHERE id = $2', [photoUrl, req.user.id]);
+    const photoPath = buildUploadedFilePath(req.file);
+    await pool.query('UPDATE users SET avatar_url = $1 WHERE id = $2', [photoPath, req.user.id]);
 
     res.json({
       success: true,
       message: 'Profile photo updated.',
-      photo_url: photoUrl,
+      photo_url: buildUploadedFileUrl(req, req.file),
     });
   } catch (err) {
     console.error('compat profile photo error:', err);
@@ -127,8 +143,8 @@ router.get('/users/my-reports', authenticate, async (req, res) => {
 
     res.json({
       success: true,
-      missing_pets: missingPets.rows.map(formatLostPet),
-      applications: applications.rows.map(formatApp),
+      missing_pets: missingPets.rows.map((row) => formatLostPet(row, req)),
+      applications: applications.rows.map((row) => formatApp(row, req)),
     });
   } catch (err) {
     console.error('compat my reports error:', err);
@@ -166,9 +182,7 @@ router.delete('/encyclopedia/favorites/:animalId', (_req, res) => {
 
 router.post('/mobile/lost-pets', authenticate, upload.array('photos', 5), async (req, res) => {
   try {
-    const imageUrl = req.files?.[0]
-      ? `${req.protocol}://${req.get('host')}/uploads/${req.files[0].filename}`
-      : null;
+    const imageUrl = buildUploadedFilePath(req.files?.[0]) || normalizeStoredAssetUrl(req.body.imageUrl);
 
     const petName = req.body.petName;
     const type = req.body.petType;
@@ -218,10 +232,13 @@ router.post('/mobile/lost-pets', authenticate, upload.array('photos', 5), async 
       ]
     );
 
+    const createdLostPet = formatLostPet(result.rows[0], req);
+    queuePetFinderAlertEmails(createdLostPet);
+
     res.status(201).json({
       success: true,
       message: 'Missing pet report submitted.',
-      missing_pet: formatLostPet(result.rows[0]),
+      missing_pet: createdLostPet,
     });
   } catch (err) {
     console.error('compat mobile lost pet error:', err);
@@ -236,9 +253,7 @@ router.post('/mobile/sightings', optionalAuth, upload.array('photos', 5), async 
       return res.status(400).json({ success: false, message: 'A missing pet must be selected.' });
     }
 
-    const imageUrl = req.files?.[0]
-      ? `${req.protocol}://${req.get('host')}/uploads/${req.files[0].filename}`
-      : null;
+    const imageUrl = buildUploadedFilePath(req.files?.[0]) || normalizeStoredAssetUrl(req.body.imageUrl);
 
     const reporterName =
       req.body.reporterName ||

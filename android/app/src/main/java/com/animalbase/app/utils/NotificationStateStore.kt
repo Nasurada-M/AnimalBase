@@ -6,6 +6,8 @@ import com.animalbase.app.models.Notification
 class NotificationStateStore(context: Context) {
 
     private val prefs = context.getSharedPreferences("animalbase_notification_state", Context.MODE_PRIVATE)
+    private val session = SessionManager(context)
+    private val profilePreferences = ProfilePreferencesStore(context)
 
     private fun readKey(userId: Int) = "read_ids_$userId"
     private fun clearedKey(userId: Int) = "cleared_ids_$userId"
@@ -51,9 +53,13 @@ class NotificationStateStore(context: Context) {
 
     fun applyVisibleState(userId: Int, notifications: List<Notification>): List<Notification> {
         val clearedIds = getClearedIds(userId)
+        val user = session.getUser()
 
         return notifications
-            .filterNot { clearedIds.contains(it.id) }
+            .filterNot { notification ->
+                clearedIds.contains(notification.id) ||
+                    !profilePreferences.isEnabledForKind(notification.kind, user)
+            }
             .map { notification ->
                 notification.copy(isRead = isRead(userId, notification.id))
             }
@@ -65,9 +71,15 @@ class NotificationStateStore(context: Context) {
     fun getDeliveredIds(userId: Int): Set<String> =
         prefs.getStringSet(deliveredKey(userId), emptySet())?.toSet().orEmpty()
 
-    fun shouldShowSystemNotification(userId: Int, notificationId: String): Boolean {
+    fun shouldShowSystemNotification(
+        userId: Int,
+        notificationId: String,
+        kind: String,
+    ): Boolean {
         val delivered = getDeliveredIds(userId)
-        return !delivered.contains(notificationId) && !isCleared(userId, notificationId)
+        return !delivered.contains(notificationId) &&
+            !isCleared(userId, notificationId) &&
+            profilePreferences.isEnabledForKind(kind, session.getUser())
     }
 
     fun markAsDelivered(userId: Int, notificationId: String) {

@@ -12,6 +12,7 @@ import android.widget.PopupWindow
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.animalbase.app.api.RetrofitClient
 import com.animalbase.app.databinding.FragmentHomeBinding
@@ -26,8 +27,10 @@ import com.animalbase.app.ui.profile.ProfileActivity
 import com.animalbase.app.utils.ImageLoader
 import com.animalbase.app.utils.NotificationNavigator
 import com.animalbase.app.utils.NotificationStateStore
+import com.animalbase.app.utils.NotificationSwipeDismissCallback
 import com.animalbase.app.utils.SessionManager
 import com.animalbase.app.utils.gone
+import com.animalbase.app.utils.showToast
 import com.animalbase.app.utils.visible
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -111,8 +114,13 @@ class HomeFragment : Fragment() {
             loadPets()
         }
 
+        binding.tilSearch.setEndIconOnClickListener {
+            binding.etSearch.text?.clear()
+        }
+        binding.tilSearch.isEndIconVisible = false
         binding.etSearch.doAfterTextChanged { text ->
             currentSearchQuery = text?.toString().orEmpty()
+            binding.tilSearch.isEndIconVisible = !currentSearchQuery.isBlank()
             loadPets()
         }
 
@@ -192,7 +200,8 @@ class HomeFragment : Fragment() {
                             val intent = Intent(requireContext(), com.animalbase.app.ui.report.ReportSightingActivity::class.java)
                             intent.putExtra("missing_pet_id", pet.missingPetId)
                             startActivity(intent)
-                        }
+                        },
+                        isOwner = { false }
                     )
                     adapter.submitList(pets)
                     binding.rvMissingPets.adapter = adapter
@@ -213,6 +222,7 @@ class HomeFragment : Fragment() {
             try {
                 val response = api.getNotifications(scope = "user")
                 if (response.isSuccessful) {
+                    if (!isAdded || _binding == null) return@launch
                     latestNotifications = notificationStore
                         .applyVisibleState(userId, response.body()?.notifications ?: emptyList())
                         .sortedByDescending { it.createdAt ?: "" }
@@ -240,13 +250,10 @@ class HomeFragment : Fragment() {
             onItemClick = { notification ->
                 markNotificationAsRead(notification)
                 notificationPopup?.dismiss()
-                NotificationNavigator.openNotificationTarget(requireContext(), notification)
+                context?.let { NotificationNavigator.openNotificationTarget(it, notification) }
             },
             onMarkRead = { notification ->
                 markNotificationAsRead(notification)
-            },
-            onClear = { notification ->
-                clearNotification(notification)
             }
         )
 
@@ -255,11 +262,20 @@ class HomeFragment : Fragment() {
 
         popoverBinding.rvPopoverNotifications.layoutManager = LinearLayoutManager(requireContext())
         popoverBinding.rvPopoverNotifications.adapter = adapter
+        ItemTouchHelper(
+            NotificationSwipeDismissCallback(requireContext()) { position ->
+                val notification = adapter.getNotificationAt(position)
+                if (notification == null) {
+                    adapter.submitList(latestNotifications.take(5).toList())
+                } else {
+                    clearNotification(notification, showFeedback = true)
+                }
+            }
+        ).attachToRecyclerView(popoverBinding.rvPopoverNotifications)
         popoverBinding.btnPopoverMarkAllRead.setOnClickListener { markAllNotificationsAsRead() }
-        popoverBinding.btnPopoverClearAllRead.setOnClickListener { clearAllReadNotifications() }
         popoverBinding.btnPopoverViewAll.setOnClickListener {
             notificationPopup?.dismiss()
-            NotificationNavigator.openNotificationCenter(requireContext())
+            context?.let(NotificationNavigator::openNotificationCenter)
         }
         popoverBinding.progressPopover.gone()
 
@@ -299,20 +315,16 @@ class HomeFragment : Fragment() {
         val adapter = notificationPopoverAdapter ?: return
         val recentNotifications = latestNotifications.take(5)
         val unreadCount = latestNotifications.count { !it.isRead }
-        val readCount = latestNotifications.count { it.isRead }
 
-        popoverBinding.tvPopoverUnreadCount.text =
-            if (unreadCount == 1) "1 unread" else "$unreadCount unread"
+        popoverBinding.tvPopoverUnreadCount.text = formatUnreadSummary(unreadCount)
         popoverBinding.btnPopoverMarkAllRead.isEnabled = unreadCount > 0
         popoverBinding.btnPopoverMarkAllRead.alpha = if (unreadCount > 0) 1f else 0.5f
-        popoverBinding.btnPopoverClearAllRead.isEnabled = readCount > 0
-        popoverBinding.btnPopoverClearAllRead.alpha = if (readCount > 0) 1f else 0.5f
         popoverBinding.tvPopoverEmpty.visibility =
             if (recentNotifications.isEmpty()) View.VISIBLE else View.GONE
         popoverBinding.rvPopoverNotifications.visibility =
             if (recentNotifications.isEmpty()) View.GONE else View.VISIBLE
 
-        adapter.submitList(recentNotifications)
+        adapter.submitList(recentNotifications.toList())
     }
 
     private fun markNotificationAsRead(notification: Notification) {
@@ -327,23 +339,15 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private fun clearNotification(notification: Notification) {
+    private fun clearNotification(notification: Notification, showFeedback: Boolean = false) {
         val userId = session.getUser()?.effectiveUserId ?: return
         notificationStore.clearNotification(userId, notification.id)
         latestNotifications = latestNotifications.filterNot { it.id == notification.id }
         renderNotificationBadge()
         renderNotificationPopover()
-    }
-
-    private fun clearAllReadNotifications() {
-        val userId = session.getUser()?.effectiveUserId ?: return
-        val readIds = latestNotifications.filter { it.isRead }.map { it.id }
-        if (readIds.isEmpty()) return
-
-        notificationStore.clearNotifications(userId, readIds)
-        latestNotifications = latestNotifications.filterNot { it.isRead }
-        renderNotificationBadge()
-        renderNotificationPopover()
+        if (showFeedback && isAdded) {
+            context?.showToast("Notification cleared")
+        }
     }
 
     private fun markAllNotificationsAsRead() {
@@ -355,6 +359,11 @@ class HomeFragment : Fragment() {
         latestNotifications = latestNotifications.map { it.copy(isRead = true) }
         renderNotificationBadge()
         renderNotificationPopover()
+    }
+
+    private fun formatUnreadSummary(unreadCount: Int): String {
+        val unreadLabel = if (unreadCount == 1) "1 unread" else "$unreadCount unread"
+        return if (latestNotifications.isEmpty()) unreadLabel else "$unreadLabel | Swipe left to clear"
     }
 
     private fun filterPetsBySearch(pets: List<com.animalbase.app.models.Pet>, query: String): List<com.animalbase.app.models.Pet> {

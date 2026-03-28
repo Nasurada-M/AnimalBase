@@ -9,10 +9,15 @@ import com.animalbase.app.databinding.ActivityAdoptionFormBinding
 import com.animalbase.app.models.AdoptionApplicationRequest
 import com.animalbase.app.ui.base.SessionAwareActivity
 import com.animalbase.app.utils.ImageLoader
+import com.animalbase.app.utils.RegionalPhoneUtils
 import com.animalbase.app.utils.ValidationUtils
+import com.animalbase.app.utils.bindPangasinanLocationAutocomplete
+import com.animalbase.app.utils.isPangasinanLocation
+import com.animalbase.app.utils.pangasinanLocationValidationMessage
 import com.animalbase.app.utils.petTextInputFilter
 import com.animalbase.app.utils.gone
 import com.animalbase.app.utils.showToast
+import com.animalbase.app.utils.tintRequiredAsterisks
 import com.animalbase.app.utils.visible
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -34,15 +39,18 @@ class AdoptionFormActivity : SessionAwareActivity() {
         binding.toolbar.setNavigationOnClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
+        binding.root.tintRequiredAsterisks()
 
         petId = intent.getIntExtra("pet_id", 0)
+        RegionalPhoneUtils.bindLocalPhoneInput(binding.etPhone)
         binding.etAddress.filters = arrayOf(petTextInputFilter(multiline = true, allowComma = true))
+        bindPangasinanLocationAutocomplete(binding.etAddress, binding.tilAddress, lifecycleScope, api)
 
         val user = session.getUser()
         user?.let {
             binding.etFullName.setText(it.fullName)
             binding.etEmail.setText(it.email)
-            binding.etPhone.setText(it.phoneNumber)
+            binding.etPhone.setText(RegionalPhoneUtils.sanitizeLocalNumber(it.phone.orEmpty()))
             binding.etAddress.setText(
                 buildString {
                     it.address?.forEach { character ->
@@ -105,17 +113,23 @@ class AdoptionFormActivity : SessionAwareActivity() {
     private fun submitApplication() {
         val fullName = binding.etFullName.text.toString().trim()
         val email = binding.etEmail.text.toString().trim()
-        val phone = binding.etPhone.text.toString().trim()
+        val phone = RegionalPhoneUtils.sanitizeLocalNumber(binding.etPhone.text.toString())
         val address = binding.etAddress.text.toString().trim()
         val whyAdopt = binding.etWhyAdopt.text.toString().trim()
         val whyChosen = binding.etWhyChosen.text.toString().trim()
         val experience = binding.etExperience.text.toString().trim()
+        binding.tilAddress.error = null
 
         val (valid, error) = ValidationUtils.isValidAdoptionForm(fullName, email, phone, address, whyAdopt)
         if (!valid) {
             showToast(error)
             return
         }
+        if (!isPangasinanLocation(address)) {
+            binding.tilAddress.error = pangasinanLocationValidationMessage("Home address")
+            return
+        }
+        binding.tilAddress.error = null
 
         binding.progressBar.visible()
         binding.btnSubmitApplication.isEnabled = false

@@ -11,8 +11,8 @@ PET CARD: Used in adoption listings and home screen
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="160dp"
-    android:layout_height="200dp"
-    android:layout_margin="4dp"
+    android:layout_height="196dp"
+    android:layout_margin="8dp"
     app:cardCornerRadius="16dp"
     app:cardElevation="4dp"
     android:clickable="true"
@@ -28,7 +28,7 @@ PET CARD: Used in adoption listings and home screen
         <ImageView
             android:id="@+id/ivPetImage"
             android:layout_width="match_parent"
-            android:layout_height="130dp"
+            android:layout_height="126dp"
             android:scaleType="centerCrop"
             android:src="@drawable/ic_placeholder_pet"/>
 

@@ -10,6 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../context/AppContext';
+import ImageLightbox from './ImageLightbox';
 import { ApiLostPet, ApiSighting, lostPetsApi } from '../services/api';
 
 type PetFinderInboxProps = {
@@ -19,7 +20,7 @@ type PetFinderInboxProps = {
 type SightingThread = {
   pet: ApiLostPet;
   sightings: ApiSighting[];
-  latestSighting: ApiSighting;
+  latestSighting: ApiSighting | null;
 };
 
 const READ_STORAGE_PREFIX = 'ab_pet_finder_inbox_reads';
@@ -59,6 +60,17 @@ function isLostPetOwner(
 
 function sortSightingsNewestFirst(left: ApiSighting, right: ApiSighting) {
   return new Date(right.reportedAt).getTime() - new Date(left.reportedAt).getTime();
+}
+
+function sortThreads(left: SightingThread, right: SightingThread) {
+  if (left.latestSighting && right.latestSighting) {
+    return sortSightingsNewestFirst(left.latestSighting, right.latestSighting);
+  }
+
+  if (left.latestSighting) return -1;
+  if (right.latestSighting) return 1;
+
+  return new Date(right.pet.reportedAt).getTime() - new Date(left.pet.reportedAt).getTime();
 }
 
 function formatRelativeTime(value: string) {
@@ -105,6 +117,8 @@ export default function PetFinderInbox({ hidden = false }: PetFinderInboxProps) 
   const [threads, setThreads] = useState<SightingThread[]>([]);
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
   const [readIds, setReadIds] = useState<number[]>([]);
+  const [ownedMissingPetCount, setOwnedMissingPetCount] = useState(0);
+  const [previewImage, setPreviewImage] = useState<{ url: string; alt: string } | null>(null);
 
   const userId = user?.id ?? null;
   const normalizedUserEmail = user?.email?.trim().toLowerCase() || '';
@@ -112,6 +126,7 @@ export default function PetFinderInbox({ hidden = false }: PetFinderInboxProps) 
   const fetchThreads = useCallback(async () => {
     if (!userId) {
       setThreads([]);
+      setOwnedMissingPetCount(0);
       return;
     }
 
@@ -123,26 +138,21 @@ export default function PetFinderInbox({ hidden = false }: PetFinderInboxProps) 
         isLostPetOwner(pet, userId, normalizedUserEmail)
       ));
 
-      if (ownedMissingPets.length === 0) {
-        setThreads([]);
-        return;
-      }
+      setOwnedMissingPetCount(ownedMissingPets.length);
 
-      const nextThreads = (await Promise.all(
+      const nextThreads = await Promise.all(
         ownedMissingPets.map(async (pet) => {
           const sightings = (await lostPetsApi.getSightings(pet.id)).sort(sortSightingsNewestFirst);
-          if (sightings.length === 0) return null;
 
           return {
             pet,
             sightings,
-            latestSighting: sightings[0],
+            latestSighting: sightings[0] ?? null,
           } satisfies SightingThread;
         })
-      ))
-        .filter((thread): thread is SightingThread => Boolean(thread))
-        .sort((left, right) => sortSightingsNewestFirst(left.latestSighting, right.latestSighting));
+      );
 
+      nextThreads.sort(sortThreads);
       setThreads(nextThreads);
 
       const availableSightingIds = new Set(
@@ -182,6 +192,7 @@ export default function PetFinderInbox({ hidden = false }: PetFinderInboxProps) 
   useEffect(() => {
     if (!userId) {
       setReadIds([]);
+      setOwnedMissingPetCount(0);
       return;
     }
 
@@ -202,9 +213,9 @@ export default function PetFinderInbox({ hidden = false }: PetFinderInboxProps) 
   }, [selectedPetId, threads]);
 
   useEffect(() => {
-    if (hidden) return;
+    if (hidden || !userId) return;
     void fetchThreads();
-  }, [fetchThreads, hidden, location.pathname]);
+  }, [fetchThreads, hidden, location.pathname, userId]);
 
   const selectedThread = useMemo(
     () => threads.find((thread) => thread.pet.id === selectedPetId) ?? null,
@@ -217,7 +228,7 @@ export default function PetFinderInbox({ hidden = false }: PetFinderInboxProps) 
   );
 
   const markThreadAsRead = useCallback((thread: SightingThread | null) => {
-    if (!userId || !thread) return;
+    if (!userId || !thread || thread.sightings.length === 0) return;
 
     const nextReadIds = Array.from(new Set([
       ...readIds,
@@ -233,7 +244,21 @@ export default function PetFinderInbox({ hidden = false }: PetFinderInboxProps) 
     markThreadAsRead(selectedThread);
   }, [isOpen, markThreadAsRead, selectedThread]);
 
-  if (hidden || threads.length === 0) return null;
+  if (hidden || !userId) return null;
+
+  const subtitle = isLoading
+    ? 'Refreshing sighting updates...'
+    : unreadCount > 0
+      ? `${unreadCount} new update${unreadCount === 1 ? '' : 's'}`
+      : ownedMissingPetCount > 0
+        ? 'Waiting for your first sighting update'
+        : 'Report a missing pet to receive sightings';
+
+  const launcherSubtitle = unreadCount > 0
+    ? `${unreadCount} sighting update${unreadCount === 1 ? '' : 's'}`
+    : ownedMissingPetCount > 0
+      ? 'Waiting for your first sighting update'
+      : 'Ready for your first Pet Finder report';
 
   return (
     <div className="fixed bottom-4 right-4 z-30 sm:bottom-6 sm:right-6">
@@ -242,13 +267,7 @@ export default function PetFinderInbox({ hidden = false }: PetFinderInboxProps) 
           <div className="flex items-center justify-between border-b border-primary-100 bg-primary-50/80 px-4 py-3">
             <div className="min-w-0">
               <p className="font-display text-base font-bold text-gray-900">Pet Finder Inbox</p>
-              <p className="text-xs text-gray-500">
-                {isLoading
-                  ? 'Refreshing sighting updates...'
-                  : unreadCount > 0
-                    ? `${unreadCount} new update${unreadCount === 1 ? '' : 's'}`
-                    : 'Sighting updates for your reports'}
-              </p>
+              <p className="text-xs text-gray-500">{subtitle}</p>
             </div>
             <button
               type="button"
@@ -260,132 +279,188 @@ export default function PetFinderInbox({ hidden = false }: PetFinderInboxProps) 
             </button>
           </div>
 
-          <div className="grid min-h-0 flex-1 grid-cols-[9rem_1fr]">
-            <div className="overflow-y-auto border-r border-primary-100 bg-primary-50/40">
-              {isLoading && (
-                <div className="flex items-center gap-2 px-3 py-3 text-xs font-medium text-primary-600">
-                  <Clock3 className="h-3.5 w-3.5 animate-spin" />
-                  Refreshing
-                </div>
-              )}
-              {threads.map((thread) => {
-                const threadUnreadCount = thread.sightings.filter((sighting) => !readIds.includes(sighting.id)).length;
-                const isActive = selectedPetId === thread.pet.id;
-
-                return (
-                  <button
-                    key={thread.pet.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedPetId(thread.pet.id);
-                      markThreadAsRead(thread);
-                    }}
-                    className={`w-full border-b border-primary-100/80 px-3 py-3 text-left transition-colors ${
-                      isActive ? 'bg-white' : 'hover:bg-white/70'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-gray-800">{thread.pet.petName}</p>
-                        <p className="mt-1 text-xs text-gray-400">{formatRelativeTime(thread.latestSighting.reportedAt)}</p>
-                      </div>
-                      {threadUnreadCount > 0 && (
-                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-bold text-white">
-                          {threadUnreadCount}
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-gray-500">
-                      {thread.latestSighting.locationSeen}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex min-h-0 flex-col">
-              {selectedThread ? (
-                <>
-                  <div className="border-b border-primary-100 px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-gray-900">{selectedThread.pet.petName}</p>
-                        <p className="truncate text-xs text-gray-500">
-                          {selectedThread.pet.breed} • {selectedThread.pet.type}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigate('/dashboard/pet-finder', {
-                            state: { petFinderAction: { petId: selectedThread.pet.id, type: 'view' } },
-                          });
-                        }}
-                        className="inline-flex items-center gap-1 rounded-xl bg-primary-100 px-3 py-2 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-200"
-                      >
-                        Open
-                        <ArrowUpRight className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+          {threads.length > 0 ? (
+            <div className="grid min-h-0 flex-1 grid-cols-[9rem_1fr]">
+              <div className="overflow-y-auto border-r border-primary-100 bg-primary-50/40">
+                {isLoading && (
+                  <div className="flex items-center gap-2 px-3 py-3 text-xs font-medium text-primary-600">
+                    <Clock3 className="h-3.5 w-3.5 animate-spin" />
+                    Refreshing
                   </div>
+                )}
+                {threads.map((thread) => {
+                  const threadUnreadCount = thread.sightings.filter((sighting) => !readIds.includes(sighting.id)).length;
+                  const isActive = selectedPetId === thread.pet.id;
 
-                  <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-primary-50/20 px-4 py-4">
-                    {selectedThread.sightings.map((sighting) => {
-                      const gmailComposeUrl = buildGmailComposeUrl(sighting.reporterEmail);
-
-                      return (
-                        <div key={sighting.id} className="flex">
-                          <div className="max-w-[92%] rounded-2xl rounded-bl-md border border-primary-100 bg-white px-4 py-3 shadow-sm">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-gray-800">{sighting.reporterName}</p>
-                                <p className="text-[11px] text-gray-400">{formatMessageTime(sighting.reportedAt)}</p>
-                              </div>
-                              {!readIds.includes(sighting.id) && (
-                                <span className="mt-1 h-2 w-2 rounded-full bg-primary-500" />
-                              )}
-                            </div>
-
-                            <div className="mt-3 space-y-2 text-sm text-gray-600">
-                              <div className="flex items-start gap-2">
-                                <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary-500" />
-                                <p>{sighting.locationSeen}</p>
-                              </div>
-                              <p className="leading-relaxed">{sighting.description}</p>
-                            </div>
-
-                            <div className="mt-3 space-y-2 border-t border-primary-50 pt-3">
-                              {gmailComposeUrl && (
-                                <a
-                                  href={gmailComposeUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="flex items-center gap-2 text-xs font-semibold text-primary-600 transition-colors hover:text-primary-800"
-                                >
-                                  <Mail className="h-3.5 w-3.5" />
-                                  <span className="truncate">{sighting.reporterEmail}</span>
-                                </a>
-                              )}
-                              {sighting.reporterPhone && (
-                                <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-                                  <Phone className="h-3.5 w-3.5" />
-                                  <span>{sighting.reporterPhone}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                  return (
+                    <button
+                      key={thread.pet.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPetId(thread.pet.id);
+                        markThreadAsRead(thread);
+                      }}
+                      className={`w-full border-b border-primary-100/80 px-3 py-3 text-left transition-colors ${
+                        isActive ? 'bg-white' : 'hover:bg-white/70'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-gray-800">{thread.pet.petName}</p>
+                          <p className="mt-1 text-xs text-gray-400">
+                            {thread.latestSighting
+                              ? formatRelativeTime(thread.latestSighting.reportedAt)
+                              : 'No sightings yet'}
+                          </p>
                         </div>
-                      );
-                    })}
+                        {threadUnreadCount > 0 && (
+                          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-bold text-white">
+                            {threadUnreadCount}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-gray-500">
+                        {thread.latestSighting?.locationSeen || 'Waiting for the first sighting update.'}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex min-h-0 flex-col">
+                {selectedThread ? (
+                  <>
+                    <div className="border-b border-primary-100 px-4 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-gray-900">{selectedThread.pet.petName}</p>
+                          <p className="truncate text-xs text-gray-500">
+                            {selectedThread.pet.breed} - {selectedThread.pet.type}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigate('/dashboard/pet-finder', {
+                              state: { petFinderAction: { petId: selectedThread.pet.id, type: 'view' } },
+                            });
+                          }}
+                          className="inline-flex items-center gap-1 rounded-xl bg-primary-100 px-3 py-2 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-200"
+                        >
+                          Open
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {selectedThread.sightings.length > 0 ? (
+                      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-primary-50/20 px-4 py-4">
+                        {selectedThread.sightings.map((sighting) => {
+                          const gmailComposeUrl = buildGmailComposeUrl(sighting.reporterEmail);
+
+                          return (
+                            <div key={sighting.id} className="flex">
+                              <div className="max-w-[92%] rounded-2xl rounded-bl-md border border-primary-100 bg-white px-4 py-3 shadow-sm">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-gray-800">{sighting.reporterName}</p>
+                                    <p className="text-[11px] text-gray-400">{formatMessageTime(sighting.reportedAt)}</p>
+                                  </div>
+                                  {!readIds.includes(sighting.id) && (
+                                    <span className="mt-1 h-2 w-2 rounded-full bg-primary-500" />
+                                  )}
+                                </div>
+
+                                <div className="mt-3 space-y-2 text-sm text-gray-600">
+                                  <div className="flex items-start gap-2">
+                                    <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary-500" />
+                                    <p>{sighting.locationSeen}</p>
+                                  </div>
+                                  {sighting.imageUrl && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setPreviewImage({
+                                        url: sighting.imageUrl!,
+                                        alt: `Sighting photo for ${selectedThread.pet.petName}`,
+                                      })}
+                                      className="block w-full overflow-hidden rounded-2xl border border-primary-100 bg-primary-50 text-left transition-colors hover:border-primary-200"
+                                    >
+                                      <img
+                                        src={sighting.imageUrl}
+                                        alt={`Sighting photo for ${selectedThread.pet.petName}`}
+                                        className="h-40 w-full object-cover"
+                                      />
+                                    </button>
+                                  )}
+                                  <p className="leading-relaxed">{sighting.description}</p>
+                                </div>
+
+                                <div className="mt-3 space-y-2 border-t border-primary-50 pt-3">
+                                  {gmailComposeUrl && (
+                                    <a
+                                      href={gmailComposeUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="flex items-center gap-2 text-xs font-semibold text-primary-600 transition-colors hover:text-primary-800"
+                                    >
+                                      <Mail className="h-3.5 w-3.5" />
+                                      <span className="truncate">{sighting.reporterEmail}</span>
+                                    </a>
+                                  )}
+                                  {sighting.reporterPhone && (
+                                    <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+                                      <Phone className="h-3.5 w-3.5" />
+                                      <span>{sighting.reporterPhone}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+                        <MessageCircle className="h-10 w-10 text-primary-200" />
+                        <div>
+                          <p className="text-sm font-semibold text-gray-700">No sighting messages yet</p>
+                          <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                            This report is ready. New sightings for {selectedThread.pet.petName} will appear here.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-gray-500">
+                    Select a missing pet report to view sighting messages.
                   </div>
-                </>
-              ) : (
-                <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-gray-500">
-                  Select a missing pet report to view sighting messages.
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+              <MessageCircle className="h-12 w-12 text-primary-200" />
+              <div>
+                <p className="text-sm font-semibold text-gray-700">
+                  {ownedMissingPetCount > 0 ? 'Waiting for your first sighting update' : 'No missing pet reports yet'}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                  {ownedMissingPetCount > 0
+                    ? 'When someone submits a sighting for one of your reports, it will show up here.'
+                    : 'Report a missing pet first and this inbox will keep your sighting updates in one place.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/pet-finder')}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary-100 px-4 py-2 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-200"
+              >
+                Open Pet Finder
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <button
@@ -409,12 +484,17 @@ export default function PetFinderInbox({ hidden = false }: PetFinderInboxProps) 
           </div>
           <div className="hidden text-left sm:block">
             <p className="text-sm font-semibold">Pet Finder Inbox</p>
-            <p className="text-[11px] text-white/80">
-              {unreadCount > 0 ? `${unreadCount} sighting update${unreadCount === 1 ? '' : 's'}` : 'View your latest sightings'}
-            </p>
+            <p className="text-[11px] text-white/80">{launcherSubtitle}</p>
           </div>
         </button>
       )}
+
+      <ImageLightbox
+        imageUrl={previewImage?.url ?? ''}
+        alt={previewImage?.alt ?? 'Sighting photo'}
+        isOpen={previewImage !== null}
+        onClose={() => setPreviewImage(null)}
+      />
     </div>
   );
 }

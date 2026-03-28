@@ -1,7 +1,8 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Heart, X, ChevronRight, MapPin, Info, Phone, Mail, CheckCircle2, Check } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ModalPortal from '../../components/ModalPortal';
+import ImageLightbox from '../../components/ImageLightbox';
 import ClearableSearchField from '../../components/ClearableSearchField';
 import { PetType } from '../../models';
 import { useAuth, usePets } from '../../context/AppContext';
@@ -47,6 +48,9 @@ export function PetDetailModal({
   onClose: () => void;
   onAdopt: () => void;
 }) {
+  const [isImageLightboxOpen, setIsImageLightboxOpen] = useState(false);
+  const detailImageUrl = pet.imageUrl || FALLBACK_PET_IMAGE;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4"
@@ -56,8 +60,19 @@ export function PetDetailModal({
         className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl animate-bounce-in"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="relative">
-          <img src={pet.imageUrl || FALLBACK_PET_IMAGE} alt={pet.name} className="w-full h-64 object-cover rounded-t-3xl" />
+        <div className="relative bg-primary-50">
+          <button
+            type="button"
+            onClick={() => setIsImageLightboxOpen(true)}
+            className="block w-full cursor-zoom-in rounded-t-3xl bg-primary-50 text-left"
+            aria-label={`View full photo of ${pet.name}`}
+          >
+            <img
+              src={detailImageUrl}
+              alt={pet.name}
+              className="block w-full h-auto rounded-t-3xl object-contain"
+            />
+          </button>
           <button
             type="button"
             onClick={onClose}
@@ -111,6 +126,12 @@ export function PetDetailModal({
             <Heart className="w-4 h-4" /> Adopt {pet.name}
           </button>
         </div>
+        <ImageLightbox
+          imageUrl={detailImageUrl}
+          alt={pet.name}
+          isOpen={isImageLightboxOpen}
+          onClose={() => setIsImageLightboxOpen(false)}
+        />
       </div>
     </div>
   );
@@ -311,19 +332,55 @@ function PetCard({ pet, onView }: { pet: ApiPet; onView: () => void }) {
 // Home Page
 export default function PetAdoptionPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const {
     pets, filteredPets, isLoading, searchQuery, setSearchQuery, selectedType, setSelectedType,
     selectedPet, adoptionStep, openPetDetail, startAdoption, submitApplication,
     confirmAdoption, closeModal, applications, error, fetchPets,
   } = usePets();
+  const handledNotificationPetRef = useRef<string | null>(null);
 
   const pendingCount = applications.filter(a => a.status === 'Pending').length;
   const hasActivePetSearchOrFilter = searchQuery.trim().length > 0 || selectedType !== 'All';
+  const notificationPetId = (() => {
+    const petIdParam = new URLSearchParams(location.search).get('petId');
+    const petId = Number(petIdParam);
+    return Number.isInteger(petId) && petId > 0 ? petId : null;
+  })();
 
   useEffect(() => {
     void fetchPets();
   }, [fetchPets]);
+
+  useEffect(() => {
+    if (notificationPetId == null) {
+      handledNotificationPetRef.current = null;
+      return;
+    }
+
+    if (isLoading) return;
+
+    const actionKey = `${location.key}:${notificationPetId}`;
+    if (handledNotificationPetRef.current === actionKey) return;
+
+    handledNotificationPetRef.current = actionKey;
+
+    const targetPet = pets.find((pet) => pet.id === notificationPetId);
+    if (targetPet) {
+      openPetDetail(targetPet);
+    }
+
+    navigate(location.pathname, { replace: true });
+  }, [
+    isLoading,
+    location.key,
+    location.pathname,
+    navigate,
+    notificationPetId,
+    openPetDetail,
+    pets,
+  ]);
 
   const handleViewApplications = () => {
     closeModal();

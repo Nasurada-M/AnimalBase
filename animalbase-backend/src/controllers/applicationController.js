@@ -1,10 +1,17 @@
 const pool = require('../db/pool');
+const { resolveStoredAssetUrl } = require('../middleware/upload');
 
-const formatApp = (row) => ({
+const isRequestLike = (request) =>
+  Boolean(request && typeof request === 'object' && typeof request.get === 'function');
+
+const formatApp = (row, req = null) => ({
   id:                     row.id,
   petId:                  row.pet_id,
   petName:                row.pet_name,
-  petImageUrl:            row.pet_image_url || row.image_url,
+  petImageUrl:            resolveStoredAssetUrl(
+    isRequestLike(req) ? req : null,
+    row.pet_image_url || row.image_url
+  ),
   petType:                row.pet_type || row.type,
   userId:                 row.user_id == null ? undefined : Number(row.user_id),
   fullName:               row.full_name,
@@ -60,7 +67,7 @@ const submitApplication = async (req, res) => {
     const pet = await pool.query('SELECT name, image_url, type FROM pets WHERE id=$1', [petId]);
     const app = { ...result.rows[0], pet_name: pet.rows[0]?.name, pet_image_url: pet.rows[0]?.image_url, pet_type: pet.rows[0]?.type };
 
-    res.status(201).json(formatApp(app));
+    res.status(201).json(formatApp(app, req));
   } catch (err) {
     console.error('submitApplication error:', err);
     res.status(500).json({ error: 'Server error.' });
@@ -78,7 +85,7 @@ const getMyApplications = async (req, res) => {
        ORDER BY aa.submitted_at DESC`,
       [req.user.id]
     );
-    res.json(result.rows.map(formatApp));
+    res.json(result.rows.map((row) => formatApp(row, req)));
   } catch (err) {
     console.error('getMyApplications error:', err);
     res.status(500).json({ error: 'Server error.' });

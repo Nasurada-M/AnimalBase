@@ -1,12 +1,29 @@
 const pool = require('../db/pool');
-const { buildUploadedFileUrl } = require('../middleware/upload');
 const {
+  buildUploadedFilePath,
+  normalizeStoredAssetUrl,
+  resolveStoredAssetUrl,
+} = require('../middleware/upload');
+const { sendPetFinderAlertEmails } = require('./authController');
+const {
+  isPangasinanLocation,
   normalizeText,
   parseCoordinatePair,
   reverseGeocodeCoordinates,
 } = require('../utils/location');
 
 let sightingGeoPointColumnPromise = null;
+const isRequestLike = (request) =>
+  Boolean(request && typeof request === 'object' && typeof request.get === 'function');
+
+const queuePetFinderAlertEmails = (lostPet) => {
+  sendPetFinderAlertEmails(lostPet).catch((err) => {
+    console.error(
+      '[notifications] Failed to queue Pet Finder alert emails:',
+      err instanceof Error ? err.message : err
+    );
+  });
+};
 
 function hasSightingGeoPointColumn() {
   if (!sightingGeoPointColumnPromise) {
@@ -28,7 +45,7 @@ function hasSightingGeoPointColumn() {
   return sightingGeoPointColumnPromise;
 }
 
-const formatLostPet = (row) => ({
+const formatLostPet = (row, req = null) => ({
   id:                  row.id,
   petName:             row.pet_name,
   type:                row.type,
@@ -39,7 +56,7 @@ const formatLostPet = (row) => ({
   colorAppearance:     row.color_appearance,
   description:         row.description,
   distinctiveFeatures: row.distinctive_features,
-  imageUrl:            row.image_url,
+  imageUrl:            resolveStoredAssetUrl(isRequestLike(req) ? req : null, row.image_url),
   lastSeenLocation:    row.last_seen_location,
   lastSeenDate:        row.last_seen_date,
   rewardOffered:       row.reward_offered,
@@ -52,7 +69,7 @@ const formatLostPet = (row) => ({
   reportedAt:          row.reported_at,
 });
 
-const formatSighting = (row) => ({
+const formatSighting = (row, req = null) => ({
   id:            row.id,
   lostPetId:     row.lost_pet_id,
   reporterName:  row.reporter_name,
@@ -64,7 +81,7 @@ const formatSighting = (row) => ({
   longitude:     row.longitude == null ? undefined : Number(row.longitude),
   dateSeen:      row.date_seen,
   description:   row.description,
-  imageUrl:      row.image_url,
+  imageUrl:      resolveStoredAssetUrl(isRequestLike(req) ? req : null, row.image_url),
   reportedAt:    row.reported_at,
 });
 
@@ -80,7 +97,7 @@ const getAllLostPets = async (req, res) => {
 
     query += ' ORDER BY reported_at DESC';
     const result = await pool.query(query, params);
-    res.json(result.rows.map(formatLostPet));
+    res.json(result.rows.map((row) => formatLostPet(row, req)));
   } catch (err) {
     res.status(500).json({ error: 'Server error.' });
   }
@@ -91,7 +108,7 @@ const getLostPetById = async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM lost_pets WHERE id=$1', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found.' });
-    res.json(formatLostPet(result.rows[0]));
+    res.json(formatLostPet(result.rows[0], req));
   } catch (err) {
     res.status(500).json({ error: 'Server error.' });
   }
@@ -104,7 +121,7 @@ const getSightings = async (req, res) => {
       'SELECT * FROM sightings WHERE lost_pet_id=$1 ORDER BY reported_at DESC',
       [req.params.id]
     );
-    res.json(result.rows.map(formatSighting));
+    res.json(result.rows.map((row) => formatSighting(row, req)));
   } catch (err) {
     res.status(500).json({ error: 'Server error.' });
   }
@@ -126,7 +143,7 @@ const reportMissingPet = async (req, res) => {
     const colorAppearance = normalizeText(req.body.colorAppearance);
     const description = normalizeText(req.body.description);
     const distinctiveFeatures = normalizeText(req.body.distinctiveFeatures);
-    const imageUrl = buildUploadedFileUrl(req, req.file) || normalizeText(req.body.imageUrl);
+    const imageUrl = buildUploadedFilePath(req.file) || normalizeStoredAssetUrl(normalizeText(req.body.imageUrl));
     const lastSeenLocation = normalizeText(req.body.lastSeenLocation);
     const lastSeenDate = normalizeText(req.body.lastSeenDate);
     const rewardOffered = normalizeText(req.body.rewardOffered);
@@ -137,6 +154,9 @@ const reportMissingPet = async (req, res) => {
 
     if (!petName || !type || !breed || !gender || !age || !colorAppearance || !description || !lastSeenLocation || !lastSeenDate || !ownerName || !ownerEmail || !ownerPhone) {
       return res.status(400).json({ error: 'Required fields are missing.' });
+    }
+    if (!isPangasinanLocation(lastSeenLocation)) {
+      return res.status(400).json({ error: 'Last seen location must be in Pangasinan, Philippines.' });
     }
 
     const result = await pool.query(
@@ -152,7 +172,10 @@ const reportMissingPet = async (req, res) => {
        req.user?.id || null]
     );
 
-    res.status(201).json(formatLostPet(result.rows[0]));
+    const createdLostPet = formatLostPet(result.rows[0], req);
+    queuePetFinderAlertEmails(createdLostPet);
+
+    res.status(201).json(createdLostPet);
   } catch (err) {
     console.error('reportMissingPet error:', err);
     res.status(500).json({ error: 'Server error.' });
@@ -174,8 +197,54 @@ const reportSighting = async (req, res) => {
       longitude: longitudeRaw,
     } = req.body;
 
-    if (!reporterName || !reporterEmail || !reporterPhone || !locationSeen || !dateSeen || !description) {
+    const normalizedReporterName = normalizeText(reporterName);
+    const normalizedReporterEmail = normalizeText(reporterEmail);
+    const normalizedReporterPhone = normalizeText(reporterPhone);
+    const normalizedLocationSeen = normalizeText(locationSeen);
+    const normalizedDateSeen = normalizeText(dateSeen);
+    const normalizedDescription = normalizeText(description);
+    const normalizedImageUrl = normalizeStoredAssetUrl(normalizeText(imageUrl));
+
+    if (
+      !normalizedReporterName
+      || !normalizedReporterEmail
+      || !normalizedReporterPhone
+      || !normalizedLocationSeen
+      || !normalizedDateSeen
+      || !normalizedDescription
+    ) {
       return res.status(400).json({ error: 'All fields are required.' });
+    }
+    if (!isPangasinanLocation(normalizedLocationSeen)) {
+      return res.status(400).json({ error: 'Sighting location must be in Pangasinan, Philippines.' });
+    }
+
+    const lostPetResult = await pool.query(
+      'SELECT id, status, reported_by, owner_email FROM lost_pets WHERE id=$1',
+      [req.params.id]
+    );
+
+    if (lostPetResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Missing pet report not found.' });
+    }
+
+    const lostPet = lostPetResult.rows[0];
+    const normalizedOwnerEmail = typeof lostPet.owner_email === 'string'
+      ? lostPet.owner_email.trim().toLowerCase()
+      : '';
+    const normalizedUserEmail = typeof req.user?.email === 'string'
+      ? req.user.email.trim().toLowerCase()
+      : '';
+    const isOwner =
+      (lostPet.reported_by != null && Number(lostPet.reported_by) === Number(req.user?.id))
+      || (normalizedOwnerEmail && normalizedOwnerEmail === normalizedUserEmail);
+
+    if (isOwner) {
+      return res.status(403).json({ error: 'You cannot submit a sighting report for your own missing pet report.' });
+    }
+
+    if (lostPet.status !== 'Missing') {
+      return res.status(400).json({ error: 'Sighting reports can only be submitted for pets that are still marked missing.' });
     }
 
     let latitude;
@@ -188,25 +257,23 @@ const reportSighting = async (req, res) => {
     }
 
     const resolvedAddress = await reverseGeocodeCoordinates(latitude, longitude);
-    const normalizedLocationSeen = normalizeText(locationSeen);
-    const finalLocationSeen = resolvedAddress || normalizedLocationSeen;
-
-    if (!finalLocationSeen) {
-      return res.status(400).json({ error: 'A readable location is required.' });
-    }
+    const isResolvedAddressInPangasinan = isPangasinanLocation(resolvedAddress);
+    const savedAddress = isResolvedAddressInPangasinan ? resolvedAddress : null;
+    const savedLatitude = isResolvedAddressInPangasinan ? latitude : null;
+    const savedLongitude = isResolvedAddressInPangasinan ? longitude : null;
 
     const params = [
       req.params.id,
-      reporterName,
-      reporterEmail,
-      reporterPhone,
-      finalLocationSeen,
-      resolvedAddress,
-      latitude,
-      longitude,
-      dateSeen,
-      description,
-      imageUrl || null,
+      normalizedReporterName,
+      normalizedReporterEmail,
+      normalizedReporterPhone,
+      normalizedLocationSeen,
+      savedAddress,
+      savedLatitude,
+      savedLongitude,
+      normalizedDateSeen,
+      normalizedDescription,
+      normalizedImageUrl || null,
       req.user?.id || null,
     ];
 
@@ -227,7 +294,7 @@ const reportSighting = async (req, res) => {
 
     const values = params.map((_, index) => `$${index + 1}`);
 
-    if (latitude !== null && longitude !== null && await hasSightingGeoPointColumn()) {
+    if (savedLatitude !== null && savedLongitude !== null && await hasSightingGeoPointColumn()) {
       columns.push('geo_point');
       values.push('ST_SetSRID(ST_MakePoint($8, $7), 4326)');
     }
@@ -239,7 +306,7 @@ const reportSighting = async (req, res) => {
       params
     );
 
-    res.status(201).json(formatSighting(result.rows[0]));
+    res.status(201).json(formatSighting(result.rows[0], req));
   } catch (err) {
     console.error('reportSighting error:', err);
     res.status(500).json({ error: 'Server error.' });
@@ -269,7 +336,7 @@ const markLostPetAsFound = async (req, res) => {
     }
 
     if (lostPet.status === 'Found') {
-      return res.json(formatLostPet(lostPet));
+      return res.json(formatLostPet(lostPet, req));
     }
 
     const result = await pool.query(
@@ -277,7 +344,7 @@ const markLostPetAsFound = async (req, res) => {
       ['Found', req.params.id]
     );
 
-    res.json(formatLostPet(result.rows[0]));
+    res.json(formatLostPet(result.rows[0], req));
   } catch (err) {
     console.error('markLostPetAsFound error:', err);
     res.status(500).json({ error: 'Server error.' });

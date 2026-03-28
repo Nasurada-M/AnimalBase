@@ -7,10 +7,32 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+node_modules/
+dist/
+dist-ssr/
 *.local
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Android local/build state
+android/.gradle/
+android/.gradle-user-home/
+android/.localappdata/
+android/.tmp/
+
+# Runtime uploads and backups
+animalbase-backend/uploads/
+animalbase-backend/uploads backup/
+animalbase-backend - backup/
+animalbase-frontend - backup/
+src - backup/
+
+# Local asset copies
+/Animalbaselogo.jpg
 
 # Editor directories and files
 .vscode/*
